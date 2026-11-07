@@ -1,0 +1,42 @@
+name: Publish validated v0.1.0 binaries
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/bootstrap-release.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    name: Attach verified Windows and macOS artifacts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 42366991597
+          github-token: ${{ github.token }}
+          repository: weepwood/GPUI-Kit-Demo
+          pattern: "*"
+          path: dist
+          merge-multiple: true
+      - name: Publish initial pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -lh dist
+          if gh release view v0.1.0 >/dev/null 2>&1; then
+            echo "Release v0.1.0 exists; no overwrite."
+            exit 0
+          fi
+          gh release create v0.1.0 dist/* \
+            --target 19fa3c086968a99127d1df408c993ce63d65865f \
+            --title "GPUI Kit Demo v0.1.0" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
