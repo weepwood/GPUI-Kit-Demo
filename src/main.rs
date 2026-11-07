@@ -3,6 +3,7 @@ mod palette;
 use gpui_kit::assets::Assets;
 use gpui_kit::base::StyledExt;
 use gpui_kit::component::Sizable;
+use gpui_kit::component::scroll::ScrollableElement;
 use gpui_kit::component::{
     button::*, h_flex, input::{Input, InputState}, switch::Switch, v_flex, Icon, IconName,
 };
