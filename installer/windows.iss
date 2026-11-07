@@ -3,6 +3,7 @@
 #define AppExeName "gpui-kit-demo.exe"
 
 [Setup]
+SourceDir=..
 AppId=GPUI-Kit-Demo-Weepwood
 AppName={#AppName}
 AppVersion={#AppVersion}
