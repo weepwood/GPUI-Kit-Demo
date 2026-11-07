@@ -1,9 +1,6 @@
 name: Publish validated v0.1.0 binaries
 
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/bootstrap-release.yml']
   workflow_dispatch:
 
 permissions:
@@ -26,7 +23,7 @@ jobs:
           merge-multiple: true
       - name: Publish initial pre-release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
         shell: bash
         run: |
           set -euo pipefail

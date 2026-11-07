@@ -73,3 +73,9 @@ Windows 安装程序 **未进行代码签名**；macOS .app **未签名/未公�
 - Codex 和 OpenAI 是相应所有者的商标，本项目与 OpenAI 无官方关系。
 
 MIT License.
+
+## GitHub Release 发布权限
+
+已验证可下载的构建产物见 [Actions run #42366991597](https://github.com/weepwood/GPUI-Kit-Demo/actions/runs/42366991597) 的 `windows-x64` 和 `macos` Artifact。
+
+构建由 GitHub Actions 完成，但在 2026-11-07 尝试以工作流自带 `GITHUB_TOKEN` 创建 Release 时，GitHub 返回 `403 Resource not accessible by integration`。如需让发布自动完成，请检查仓库 **Settings → Actions → General → Workflow permissions**，并在必要时通过 **Settings → Secrets and variables → Actions** 配置具有本仓库 Contents 读写权限的专用 `RELEASE_TOKEN`（不要将令牌提交到代码库）。之后手动运行 **Publish validated v0.1.0 binaries** 工作流，即可直接复用上述已验证构建产物创建预发布版，无需重新编译。
