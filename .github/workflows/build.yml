@@ -1,0 +1,109 @@
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows x64 installer
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - name: Check
+        run: |
+          cargo fmt --all
+          cargo test
+      - name: Build native executable
+        run: cargo build --release
+      - name: Package ZIP and installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path target/release/gpui-kit-demo.exe -DestinationPath dist/GPUI-Kit-Demo-Windows-x64.zip
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found" }
+          & $iscc installer/windows.iss
+          if ($LASTEXITCODE -ne 0) { throw "Installer packaging failed" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: dist/*
+          if-no-files-found: error
+
+  macos:
+    name: macOS app bundle
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check
+        run: |
+          cargo fmt --all
+          cargo test
+      - name: Build native application
+        run: cargo build --release
+      - name: Package .app bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="dist/GPUI Kit Demo.app"
+          mkdir -p "$app/Contents/MacOS"
+          cp target/release/gpui-kit-demo "$app/Contents/MacOS/"
+          chmod +x "$app/Contents/MacOS/gpui-kit-demo"
+          cp installer/Info.plist "$app/Contents/Info.plist"
+          arch="$(uname -m)"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/GPUI-Kit-Demo-macOS-$arch.zip"
+          rm -rf "$app"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [windows, macos]
+    runs-on: ubuntu-24.04
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*"
+          path: dist
+          merge-multiple: true
+      - name: Publish initial or tagged release
+        shell: bash
+        env:
+          GH_TOKEN: \${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="v0.1.0"
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; skipping"
+            exit 0
+          fi
+          gh release create "$tag" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "GPUI Kit Demo $tag" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
