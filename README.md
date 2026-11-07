@@ -13,10 +13,10 @@
 - Overview / Components / Activity / Settings 四个示例页面。
 - 内置 GPUI Kit Button、Icon、Input、Switch，具有真实交互。
 - 应用级颜色 Token：src/palette.rs；深色与浅色界面可切换。
-- 内存任务记录、按钮事件计数、页面导航。
+- 任务持久化和删除、按钮事件计数、页面导航。
 - Windows x64 ZIP + Inno Setup 安装器、macOS .app ZIP 自动构建与 Release。
 
-**范围说明**：任务输入仅增加本地内存里的样例条目，不会启动 AI 任务、访问后端、写入磁盘或保存长期设置。
+**范围说明**：任务输入只会保存本地任务条目，不会启动 AI 任务或访问后端。任务与布局偏好保存在系统应用配置目录（JSON）；不上传数据。
 
 ## 环境
 
@@ -62,9 +62,17 @@ cargo build --release
 4. 如需数据持久化，可替换内存 tasks 为 SQLite、文件或服务端 API。
 5. 投入正式产品前需要增加 UI 回归测试、不同 DPI 与无障碍验收。
 
+## v0.2.0 优化
+
+- 恢复上次启动的浅色/深色主题、侧栏折叠状态和任务列表。
+- 切换主题时使用 `Theme::change` 同步 GPUI Kit 原生组件主题。
+- 任务支持删除；新增任务后清空输入框；限制任务数量和文本长度。
+- 保存出错时在底部状态栏反馈，新增配置数据规范化单元测试。
+- 只有版本标签触发公开 Release，避免 `main` 重复发布旧版本。
+
 ## 发布
 
-向 main 分支推送或推送 v* 标签会触发 GitHub Actions。首次 main 构建全部成功后，流程尝试自动创建 v0.1.0 预发布版本；后续版本建议打新的版本标签。
+向 main 分支推送或推送 v* 标签会触发 GitHub Actions。只有推送 `v*` 标签才发布 GitHub Release，普通 `main` 更新仅检查与产出 Actions Artifact。
 
 Windows 安装程序 **未进行代码签名**；macOS .app **未签名/未公证**。平台安全提示是预期情况，生产发布需配置证书。
 

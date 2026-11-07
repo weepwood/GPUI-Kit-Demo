@@ -1,11 +1,13 @@
-# GPUI Kit Demo v0.1.0
+# GPUI Kit Demo v0.2.0
 
-首个原生桌面 UI 脚手架预发布：
+本次迭代在 v0.1.0 可运行的原生桌面工作区基础上完善日常使用能力：
 
-- 参考 Codex 桌面工作区的信息架构
-- Sidebar、Header、Overview、Components、Activity、Settings
-- GPUI Kit 原生按钮、输入框、图标、开关
-- Windows 安装器/ZIP 和 macOS .app ZIP
-- 内存级演示交互，无 AI 服务或数据持久化
+- 持久化主题、侧栏、示例任务；重启后恢复本地配置。
+- 深浅色切换同时更新 GPUI Kit 的全局主题，避免原生控件与外壳出现风格错位。
+- Activity 页面支持删除任务，输入区新增任务后自动清空。
+- 本地设置读取、数据清洗及 JSON 往返测试。
+- 修改发布策略：普通提交仅执行跨平台 CI，发布 v* 标签才上传 Release。
 
-此版本尚需用户在真实设备上完成视觉和功能验收。Windows 和 macOS 安装包未签名。
+本项目为 Codex-inspired 的视觉演示脚手架，不是 OpenAI 官方 Codex 客户端，任务没有 AI 后台。
+
+注意：应用暂未签名或 macOS 公证，仍需真实设备的交互和无障碍人工测试。

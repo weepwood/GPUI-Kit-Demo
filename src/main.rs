@@ -1,11 +1,12 @@
 mod palette;
+mod storage;
 
 use gpui_kit::assets::Assets;
 use gpui_kit::base::StyledExt;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::scroll::ScrollableElement;
 use gpui_kit::component::{
-    button::*, h_flex, input::{Input, InputState}, switch::Switch, v_flex, Icon, IconName,
+    button::*, h_flex, input::{Input, InputState}, switch::Switch, v_flex, Icon, IconName, Theme, ThemeMode,
 };
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
@@ -30,17 +31,37 @@ struct Workspace {
     clicks: usize,
     tasks: Vec<String>,
     input: Entity<InputState>,
+    save_error: Option<String>,
 }
 
 impl Workspace {
-    fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+    fn new(window: &mut Window, cx: &mut Context<Self>, settings: storage::Settings, save_error: Option<String>) -> Self {
         let input = cx.new(|cx| InputState::new(window, cx)
             .placeholder("Describe a local demo task..."));
         Self {
-            page: Page::Overview, dark: false, collapsed: false, clicks: 0,
-            tasks: vec!["Explore GPUI Kit components".into(), "Customize the desktop shell".into()],
-            input,
+            page: Page::Overview, dark: settings.dark, collapsed: settings.collapsed, clicks: 0,
+            tasks: settings.tasks, input, save_error,
         }
+    }
+
+    fn persist(&mut self) {
+        let settings = storage::Settings {
+            dark: self.dark, collapsed: self.collapsed, tasks: self.tasks.clone(),
+        };
+        self.save_error = storage::save(&settings).err().map(|err| err.to_string());
+    }
+
+    fn set_dark(&mut self, dark: bool, cx: &mut Context<Self>) {
+        self.dark = dark;
+        Theme::change(if dark { ThemeMode::Dark } else { ThemeMode::Light }, None, cx);
+        self.persist();
+        cx.notify();
+    }
+
+    fn set_collapsed(&mut self, collapsed: bool, cx: &mut Context<Self>) {
+        self.collapsed = collapsed;
+        self.persist();
+        cx.notify();
     }
 
     fn menu_item(
@@ -100,7 +121,7 @@ impl Workspace {
                     .text_color(rgb(p.muted))
                     .hover(move |s| s.bg(rgb(p.hover)))
                     .on_click(cx.listener(|this, _, _, cx| {
-                        this.collapsed = !this.collapsed; cx.notify();
+                        this.set_collapsed(!this.collapsed, cx);
                     }))
                     .child(Icon::new(IconName::PanelLeft))
                     .when(!self.collapsed, |el| el.child(div().text_sm().child("Collapse sidebar")))
@@ -131,12 +152,12 @@ impl Workspace {
                 h_flex().items_center().gap_3()
                     .child(div().px_3().py_1().rounded_full()
                         .bg(rgb(p.status_bg)).text_color(rgb(p.status_text))
-                        .text_xs().child("● Local preview"))
+                        .text_xs().child("● Local workspace"))
                     .child(
                         Button::new("theme-button").small()
                             .label(if self.dark { "Light mode" } else { "Dark mode" })
                             .on_click(cx.listener(|this, _, _, cx| {
-                                this.dark = !this.dark; cx.notify();
+                                this.set_dark(!this.dark, cx);
                             }))
                     )
             )
@@ -252,7 +273,7 @@ impl Workspace {
                         Switch::new("collapse-switch").label("Collapse sidebar")
                             .checked(self.collapsed)
                             .on_change(cx.listener(|this, checked, _, cx| {
-                                this.collapsed = *checked; cx.notify();
+                                this.set_collapsed(*checked, cx);
                             }))
                     )
                     .child(div().text_xs().text_color(rgb(p.subtle))
@@ -260,27 +281,44 @@ impl Workspace {
             )
     }
 
-    fn activity(&self, p: Palette) -> impl IntoElement {
+    fn activity(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex().gap_6()
             .child(self.section_title("Activity",
-                "Task examples stored in memory only. No AI backend is connected.", p))
+                "Saved locally on this device. This demo does not call an AI service.", p))
             .child(
                 v_flex().rounded_xl()
                     .border_1().border_color(rgb(p.border)).bg(rgb(p.surface))
+                    .when(self.tasks.is_empty(), |el| el.child(
+                        v_flex().gap_2().p_8().items_center()
+                            .child(div().text_sm().font_medium().child("No tasks yet"))
+                            .child(div().text_xs().text_color(rgb(p.muted))
+                                .child("Add a task from the composer below to get started."))
+                    ))
                     .children(self.tasks.iter().rev().enumerate().map(|(i, title)| {
+                        let index = self.tasks.len() - 1 - i;
                         h_flex().gap_3().px_5().py_4().items_center()
                             .border_b_1().border_color(rgb(p.border))
                             .child(Icon::new(IconName::CircleCheck))
                             .child(
-                                v_flex().flex_1().gap_1()
+                                v_flex().flex_1().gap_1().min_w_0()
                                     .child(div().text_sm().font_medium()
                                         .child(SharedString::from(title.clone())))
                                     .child(div().text_xs().text_color(rgb(p.subtle))
                                         .child(SharedString::from(
-                                            format!("TASK #{:03} · Local demo", self.tasks.len() - i)
+                                            format!("TASK #{:03} · Local", index + 1)
                                         )))
                             )
-                            .child(div().text_xs().text_color(rgb(p.status_text)).child("Ready"))
+                            .child(
+                                Button::new(SharedString::from(format!("remove-task-{}", index)))
+                                    .small().ghost().label("Remove")
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        if index < this.tasks.len() {
+                                            this.tasks.remove(index);
+                                            this.persist();
+                                            cx.notify();
+                                        }
+                                    }))
+                            )
                     }))
             )
     }
@@ -297,7 +335,7 @@ impl Workspace {
                         Switch::new("dark-switch").label("Dark appearance")
                             .checked(self.dark)
                             .on_change(cx.listener(|this, checked, _, cx| {
-                                this.dark = *checked; cx.notify();
+                                this.set_dark(*checked, cx);
                             }))
                     )
                     .child(div().h(px(1.)).bg(rgb(p.border)))
@@ -312,9 +350,9 @@ impl Workspace {
                     .child(div().h(px(1.)).bg(rgb(p.border)))
                     .child(div().text_sm().font_semibold().child("About"))
                     .child(div().text_sm().text_color(rgb(p.muted))
-                        .child("GPUI Kit Demo 0.1.0 · Rust · GPUI Kit 0.9.0"))
+                        .child("GPUI Kit Demo 0.2.0 · Rust · GPUI Kit 0.9.0"))
                     .child(div().text_xs().text_color(rgb(p.subtle))
-                        .child("All preferences reset on restart in this starter version."))
+                        .child("Appearance, sidebar and tasks are saved locally between sessions."))
             )
     }
 
@@ -327,12 +365,17 @@ impl Workspace {
                     .child(div().min_w_0().flex_1().child(Input::new(&self.input)))
                     .child(
                         Button::new("add-task").primary().label("Add task")
-                            .on_click(cx.listener(|this, _, _, cx| {
+                            .on_click(cx.listener(|this, _, window, cx| {
                                 let entered = this.input.read(cx).value().to_string();
                                 if !entered.trim().is_empty() {
-                                    this.tasks.push(entered.trim().to_owned());
-                                    this.page = Page::Activity;
-                                    cx.notify();
+                                    if this.tasks.len() < storage::MAX_TASKS {
+                                        let title: String = entered.trim().chars().take(storage::MAX_TASK_CHARS).collect();
+                                        this.tasks.push(title);
+                                        this.input.update(cx, |input, cx| input.set_value("", window, cx));
+                                        this.page = Page::Activity;
+                                        this.persist();
+                                        cx.notify();
+                                    }
                                 }
                             }))
                     )
@@ -340,9 +383,9 @@ impl Workspace {
             .child(
                 h_flex().items_center().justify_between()
                     .child(div().text_xs().text_color(rgb(p.subtle))
-                        .child("Local demo · No AI service or telemetry"))
-                    .child(div().text_xs().text_color(rgb(p.subtle))
-                        .child("Rust · GPUI Kit 0.9"))
+                        .child("Local workspace · No AI service or telemetry"))
+                    .child(div().text_xs().text_color(rgb(if self.save_error.is_some() { p.status_text } else { p.subtle }))
+                        .child(SharedString::from(self.save_error.as_ref().map(|e| format!("Save failed: {e}")).unwrap_or_else(|| "Saved on device · GPUI Kit 0.9".to_string()))))
             )
     }
 }
@@ -375,12 +418,20 @@ impl Render for Workspace {
 fn main() {
     gpui_kit::application().with_assets(Assets).run(|cx| {
         gpui_kit::init(cx);
+        let (settings, save_error) = match storage::load() {
+            Ok(settings) => (settings, None),
+            Err(err) => {
+                eprintln!("Unable to restore local settings: {err}");
+                (storage::Settings::default(), Some(format!("Could not restore settings: {err}")))
+            }
+        };
+        Theme::change(if settings.dark { ThemeMode::Dark } else { ThemeMode::Light }, None, cx);
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1220.), px(800.)), cx)),
             ..Default::default()
         };
-        gpui_kit::open_window(options, cx, |window, cx| {
-            cx.new(|cx| Workspace::new(window, cx))
+        gpui_kit::open_window(options, cx, move |window, cx| {
+            cx.new(|cx| Workspace::new(window, cx, settings, save_error))
         }).expect("Failed to open GPUI Kit Demo");
     });
 }
