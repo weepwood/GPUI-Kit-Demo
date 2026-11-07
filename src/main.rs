@@ -405,7 +405,7 @@ impl Render for Workspace {
                                     .child(match self.page {
                                         Page::Overview => self.overview(p, cx).into_any_element(),
                                         Page::Components => self.components(p, cx).into_any_element(),
-                                        Page::Activity => self.activity(p).into_any_element(),
+                                        Page::Activity => self.activity(p, cx).into_any_element(),
                                         Page::Settings => self.settings(p, cx).into_any_element(),
                                     })
                             )
