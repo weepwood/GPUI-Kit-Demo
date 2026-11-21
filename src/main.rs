@@ -18,8 +18,8 @@ enum Page { Overview, Components, Activity, Settings }
 impl Page {
     fn title(self) -> &'static str {
         match self {
-            Self::Overview => "Overview", Self::Components => "Components",
-            Self::Activity => "Activity", Self::Settings => "Settings",
+            Self::Overview => "Home", Self::Components => "Library",
+            Self::Activity => "Tasks", Self::Settings => "Preferences",
         }
     }
 }
@@ -31,6 +31,7 @@ struct Workspace {
     clicks: usize,
     tasks: Vec<String>,
     input: Entity<InputState>,
+    playground_input: Entity<InputState>,
     save_error: Option<String>,
 }
 
@@ -38,9 +39,11 @@ impl Workspace {
     fn new(window: &mut Window, cx: &mut Context<Self>, settings: storage::Settings, save_error: Option<String>) -> Self {
         let input = cx.new(|cx| InputState::new(window, cx)
             .placeholder("Add a task to your workspace"));
+        let playground_input = cx.new(|cx| InputState::new(window, cx)
+            .placeholder("Type to preview the native input"));
         Self {
             page: Page::Overview, dark: settings.dark, collapsed: settings.collapsed, clicks: 0,
-            tasks: settings.tasks, input, save_error,
+            tasks: settings.tasks, input, playground_input, save_error,
         }
     }
 
@@ -104,15 +107,15 @@ impl Workspace {
                 div().px_3().pb_2().text_xs().text_color(rgb(p.subtle))
                     .child("NAVIGATION")
             ))
-            .child(self.menu_item("nav-overview", "Overview", IconName::LayoutDashboard, Page::Overview, p, cx))
-            .child(self.menu_item("nav-components", "Components", IconName::GalleryVerticalEnd, Page::Components, p, cx))
-            .child(self.menu_item("nav-activity", "Activity", IconName::Inbox, Page::Activity, p, cx))
+            .child(self.menu_item("nav-overview", "Home", IconName::LayoutDashboard, Page::Overview, p, cx))
+            .child(self.menu_item("nav-components", "Library", IconName::GalleryVerticalEnd, Page::Components, p, cx))
+            .child(self.menu_item("nav-activity", "Tasks", IconName::Inbox, Page::Activity, p, cx))
             .child(div().h(px(18.)))
             .when(!self.collapsed, |el| el.child(
                 div().px_3().pb_2().text_xs().text_color(rgb(p.subtle))
                     .child("SYSTEM")
             ))
-            .child(self.menu_item("nav-settings", "Settings", IconName::Settings, Page::Settings, p, cx))
+            .child(self.menu_item("nav-settings", "Preferences", IconName::Settings, Page::Settings, p, cx))
             .child(div().flex_1())
             .child(div().h(px(1.)).bg(rgb(p.border)))
             .child(
@@ -266,7 +269,7 @@ impl Workspace {
                     .child(div().h(px(1.)).bg(rgb(p.border)))
                     .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("02  /  ENTRY"))
                     .child(div().text_sm().font_semibold().child("Text input"))
-                    .child(div().max_w(px(500.)).child(Input::new(&self.input)))
+                    .child(div().max_w(px(500.)).child(Input::new(&self.playground_input)))
                     .child(div().h(px(1.)).bg(rgb(p.border)))
                     .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("03  /  STATE"))
                     .child(div().text_sm().font_semibold().child("Toggle"))
