@@ -18,10 +18,7 @@ impl Default for Settings {
         Self {
             dark: false,
             collapsed: false,
-            tasks: vec![
-                "Explore GPUI Kit components".into(),
-                "Customize the desktop shell".into(),
-            ],
+            tasks: Vec::new(),
         }
     }
 }
@@ -68,9 +65,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn defaults_have_two_tasks() {
+    fn starts_with_a_clean_task_list() {
         let default = Settings::default();
-        assert_eq!(default.tasks.len(), 2);
+        assert!(default.tasks.is_empty());
         assert!(!default.dark);
     }
 
@@ -79,7 +76,7 @@ mod tests {
         let parsed: Settings = serde_json::from_str(r#"{"dark":true}"#).unwrap();
         assert!(parsed.dark);
         assert!(!parsed.collapsed);
-        assert_eq!(parsed.tasks.len(), 2);
+        assert!(parsed.tasks.is_empty());
     }
 
     #[test]

@@ -37,7 +37,7 @@ struct Workspace {
 impl Workspace {
     fn new(window: &mut Window, cx: &mut Context<Self>, settings: storage::Settings, save_error: Option<String>) -> Self {
         let input = cx.new(|cx| InputState::new(window, cx)
-            .placeholder("Describe a local demo task..."));
+            .placeholder("Add a task to your workspace"));
         Self {
             page: Page::Overview, dark: settings.dark, collapsed: settings.collapsed, clicks: 0,
             tasks: settings.tasks, input, save_error,
@@ -69,8 +69,8 @@ impl Workspace {
         page: Page, p: Palette, cx: &mut Context<Self>
     ) -> impl IntoElement {
         let active = self.page == page;
-        h_flex().id(id).w_full().h(px(38.)).px_3().gap_3()
-            .items_center().cursor_pointer().rounded_lg()
+        h_flex().id(id).w_full().h(px(36.)).px_3().gap_3()
+            .items_center().cursor_pointer().rounded_md()
             .bg(rgb(if active { p.selected } else { p.sidebar }))
             .text_color(rgb(if active { p.text } else { p.muted }))
             .hover(move |s| s.bg(rgb(p.hover)))
@@ -82,7 +82,7 @@ impl Workspace {
     }
 
     fn sidebar(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex().h_full().w(px(if self.collapsed { 64. } else { 242. }))
+        v_flex().h_full().w(px(if self.collapsed { 64. } else { 224. }))
             .flex_shrink_0().gap_2().p_3().bg(rgb(p.sidebar))
             .border_r_1().border_color(rgb(p.border))
             .child(
@@ -95,14 +95,14 @@ impl Workspace {
                     )
                     .when(!self.collapsed, |el| el.child(
                         v_flex().gap_0()
-                            .child(div().text_sm().font_semibold().child("GPUI Studio"))
-                            .child(div().text_xs().text_color(rgb(p.subtle)).child("Desktop Starter"))
+                            .child(div().text_sm().font_semibold().child("Workbench"))
+                            .child(div().text_xs().text_color(rgb(p.subtle)).child("GPUI KIT / NATIVE"))
                     ))
             )
             .child(div().h(px(14.)))
             .when(!self.collapsed, |el| el.child(
                 div().px_3().pb_2().text_xs().text_color(rgb(p.subtle))
-                    .child("WORKSPACE")
+                    .child("NAVIGATION")
             ))
             .child(self.menu_item("nav-overview", "Overview", IconName::LayoutDashboard, Page::Overview, p, cx))
             .child(self.menu_item("nav-components", "Components", IconName::GalleryVerticalEnd, Page::Components, p, cx))
@@ -110,7 +110,7 @@ impl Workspace {
             .child(div().h(px(18.)))
             .when(!self.collapsed, |el| el.child(
                 div().px_3().pb_2().text_xs().text_color(rgb(p.subtle))
-                    .child("PREFERENCES")
+                    .child("SYSTEM")
             ))
             .child(self.menu_item("nav-settings", "Settings", IconName::Settings, Page::Settings, p, cx))
             .child(div().flex_1())
@@ -132,30 +132,28 @@ impl Workspace {
                         .flex().items_center().justify_center().child("W"))
                     .when(!self.collapsed, |el| el.child(
                         v_flex().gap_0()
-                            .child(div().text_sm().font_medium().child("Workspace"))
-                            .child(div().text_xs().text_color(rgb(p.subtle)).child("Local mode"))
+                            .child(div().text_sm().font_medium().child("On this device"))
+                            .child(div().text_xs().text_color(rgb(p.subtle)).child("No account needed"))
                     ))
             )
     }
 
     fn header(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
-        h_flex().w_full().h(px(62.)).flex_shrink_0()
+        h_flex().w_full().h(px(58.)).flex_shrink_0()
             .px_7().items_center().justify_between()
             .border_b_1().border_color(rgb(p.border)).bg(rgb(p.surface))
             .child(
                 h_flex().gap_2().items_center()
-                    .child(div().text_sm().text_color(rgb(p.subtle)).child("Workspace"))
+                    .child(div().text_sm().text_color(rgb(p.subtle)).child("Workbench"))
                     .child(div().text_sm().text_color(rgb(p.subtle)).child("/"))
                     .child(div().text_sm().font_semibold().child(self.page.title()))
             )
             .child(
-                h_flex().items_center().gap_3()
-                    .child(div().px_3().py_1().rounded_full()
-                        .bg(rgb(p.status_bg)).text_color(rgb(p.status_text))
-                        .text_xs().child("● Local workspace"))
+                h_flex().items_center().gap_4()
+                    .child(div().text_xs().text_color(rgb(p.muted)).child("LOCAL"))
                     .child(
                         Button::new("theme-button").small()
-                            .label(if self.dark { "Light mode" } else { "Dark mode" })
+                            .label(if self.dark { "Light appearance" } else { "Dark appearance" })
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.set_dark(!this.dark, cx);
                             }))
@@ -163,18 +161,25 @@ impl Workspace {
             )
     }
 
-    fn card(&self, id: &'static str, title: &'static str, description: &'static str,
+    fn destination_row(
+        &self, id: &'static str, title: &'static str, description: &'static str,
         icon: IconName, page: Page, p: Palette, cx: &mut Context<Self>
     ) -> impl IntoElement {
-        v_flex().id(id).flex_1().min_w_0().h(px(150.)).p_4().gap_3()
-            .rounded_xl().border_1().border_color(rgb(p.border))
-            .bg(rgb(p.surface)).cursor_pointer()
+        h_flex().id(id).w_full().min_w_0().gap_4().px_5().py_4()
+            .items_center().rounded_lg().cursor_pointer()
+            .bg(rgb(p.surface)).border_1().border_color(rgb(p.border))
             .hover(move |s| s.bg(rgb(p.hover)))
-            .on_click(cx.listener(move |this, _, _, cx| { this.page = page; cx.notify(); }))
-            .child(Icon::new(icon))
-            .child(v_flex().gap_1()
-                .child(div().text_sm().font_semibold().child(title))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.page = page;
+                cx.notify();
+            }))
+            .child(div().size_9().rounded_md().bg(rgb(p.accent_soft))
+                .text_color(rgb(p.accent_ink)).flex().items_center()
+                .justify_center().child(Icon::new(icon)))
+            .child(v_flex().flex_1().min_w_0().gap_1()
+                .child(div().text_sm().font_medium().child(title))
                 .child(div().text_xs().text_color(rgb(p.muted)).child(description)))
+            .child(div().text_xs().text_color(rgb(p.subtle)).child("Open"))
     }
 
     fn section_title(&self, title: &'static str, detail: &'static str, p: Palette)
@@ -185,67 +190,61 @@ impl Workspace {
     }
 
     fn overview(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex().gap_7()
+        v_flex().gap_6()
             .child(
-                v_flex().gap_2().pt_7()
-                    .child(div().text_xs().text_color(rgb(p.subtle))
-                        .font_semibold().child("YOUR WORKSPACE / START HERE"))
-                    .child(div().text_3xl().font_semibold().child("Build something great."))
+                v_flex().gap_2().pt_4()
+                    .child(div().text_xs().font_semibold()
+                        .text_color(rgb(p.accent_ink)).child("WORKBENCH / OVERVIEW"))
+                    .child(div().text_3xl().font_semibold().child("Workspace overview"))
                     .child(div().text_sm().text_color(rgb(p.muted))
-                        .child("A focused, reusable native desktop shell built with Rust and GPUI Kit."))
+                        .child("Local tasks, native controls, and appearance settings."))
             )
             .child(
-                v_flex().gap_3()
-                    .child(div().text_sm().font_semibold().child("Quick start"))
+                v_flex().gap_4().p_6().rounded_lg()
+                    .border_1().border_color(rgb(p.border)).bg(rgb(p.surface))
                     .child(
-                        h_flex().gap_3()
-                            .child(self.card("card-components", "Explore components",
-                                "Native inputs, controls and buttons",
-                                IconName::GalleryVerticalEnd, Page::Components, p, cx))
-                            .child(self.card("card-activity", "View activity",
-                                "Local example task history",
-                                IconName::Inbox, Page::Activity, p, cx))
-                            .child(self.card("card-settings", "Personalize",
-                                "Appearance and workspace layout",
-                                IconName::Settings, Page::Settings, p, cx))
+                        h_flex().gap_3().items_center()
+                            .child(div().text_xs().font_semibold().text_color(rgb(p.subtle))
+                                .child("YOUR TASKS"))
+                            .child(div().flex_1())
+                            .child(div().text_xs().text_color(rgb(p.muted))
+                                .child("Stored on this device"))
+                    )
+                    .child(div().text_3xl().font_semibold()
+                        .child(SharedString::from(format!("{}", self.tasks.len()))))
+                    .child(div().text_sm().text_color(rgb(p.muted))
+                        .child(if self.tasks.len() == 1 { "Task in your list" } else { "Tasks in your list" }))
+                    .child(
+                        h_flex().items_center()
+                            .child(Button::new("overview-activity").primary().label("Open task list")
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.page = Page::Activity;
+                                    cx.notify();
+                                })))
                     )
             )
             .child(
                 v_flex().gap_3()
-                    .child(div().text_sm().font_semibold().child("Getting started"))
-                    .child(
-                        v_flex().gap_4().p_5().rounded_xl()
-                            .border_1().border_color(rgb(p.border)).bg(rgb(p.surface))
-                            .child(
-                                h_flex().gap_3().items_center()
-                                    .child(Icon::new(IconName::CircleCheck))
-                                    .child(div().text_sm().child("GPUI Kit application initialized"))
-                            )
-                            .child(div().h(px(1.)).bg(rgb(p.border)))
-                            .child(
-                                h_flex().gap_3().items_center()
-                                    .child(Icon::new(IconName::CircleCheck))
-                                    .child(div().text_sm().child("Reusable navigation and theme tokens"))
-                            )
-                            .child(div().h(px(1.)).bg(rgb(p.border)))
-                            .child(
-                                h_flex().gap_3().items_center()
-                                    .child(Icon::new(IconName::CircleCheck))
-                                    .child(div().text_sm().child("Windows and macOS release pipeline"))
-                            )
-                    )
+                    .child(div().text_sm().font_semibold().child("Explore the workspace"))
+                    .child(self.destination_row("overview-components", "Component library",
+                        "Inspect buttons, inputs, switches, and color roles",
+                        IconName::GalleryVerticalEnd, Page::Components, p, cx))
+                    .child(self.destination_row("overview-preferences", "Appearance & layout",
+                        "Switch themes and adjust the navigation",
+                        IconName::Settings, Page::Settings, p, cx))
             )
             .child(div().text_xs().text_color(rgb(p.subtle))
-                .child("Codex-inspired appearance; this is not an official OpenAI app."))
+                .child("A native desktop reference project. Everything runs locally."))
     }
 
     fn components(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex().gap_6()
-            .child(self.section_title("Component gallery",
-                "Functional controls from the GPUI Kit component system.", p))
+            .child(self.section_title("Component library",
+                "Native interaction patterns and their actual states.", p))
             .child(
                 v_flex().gap_5().p_6().rounded_xl()
                     .border_1().border_color(rgb(p.border)).bg(rgb(p.surface))
+                    .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("01  /  ACTIONS"))
                     .child(div().text_sm().font_semibold().child("Buttons"))
                     .child(
                         h_flex().gap_3().items_center()
@@ -265,9 +264,11 @@ impl Workspace {
                                 .child(SharedString::from(format!("{} clicks", self.clicks))))
                     )
                     .child(div().h(px(1.)).bg(rgb(p.border)))
+                    .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("02  /  ENTRY"))
                     .child(div().text_sm().font_semibold().child("Text input"))
                     .child(div().max_w(px(500.)).child(Input::new(&self.input)))
                     .child(div().h(px(1.)).bg(rgb(p.border)))
+                    .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("03  /  STATE"))
                     .child(div().text_sm().font_semibold().child("Toggle"))
                     .child(
                         Switch::new("collapse-switch").label("Collapse sidebar")
@@ -277,22 +278,26 @@ impl Workspace {
                             }))
                     )
                     .child(div().text_xs().text_color(rgb(p.subtle))
-                        .child("Controls update application state and re-render natively."))
+                        .child("Each control updates live state; no simulated responses."))
             )
     }
 
     fn activity(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex().gap_6()
-            .child(self.section_title("Activity",
-                "Saved locally on this device. This demo does not call an AI service.", p))
+        v_flex().gap_5()
+            .child(self.section_title("Tasks",
+                "A small, persistent task list for trying native interactions.", p))
+            .child(self.task_editor(p, cx))
+            .child(div().text_sm().font_semibold()
+                .child(SharedString::from(format!("Saved tasks · {}", self.tasks.len()))))
             .child(
-                v_flex().rounded_xl()
+                v_flex().rounded_lg()
                     .border_1().border_color(rgb(p.border)).bg(rgb(p.surface))
                     .when(self.tasks.is_empty(), |el| el.child(
                         v_flex().gap_2().p_8().items_center()
-                            .child(div().text_sm().font_medium().child("No tasks yet"))
+                            .child(Icon::new(IconName::Inbox))
+                            .child(div().text_sm().font_medium().child("Nothing here yet"))
                             .child(div().text_xs().text_color(rgb(p.muted))
-                                .child("Add a task from the composer below to get started."))
+                                .child("Create a task above to populate this list."))
                     ))
                     .children(self.tasks.iter().rev().enumerate().map(|(i, title)| {
                         let index = self.tasks.len() - 1 - i;
@@ -305,7 +310,7 @@ impl Workspace {
                                         .child(SharedString::from(title.clone())))
                                     .child(div().text_xs().text_color(rgb(p.subtle))
                                         .child(SharedString::from(
-                                            format!("TASK #{:03} · Local", index + 1)
+                                            format!("LOCAL TASK / {:03}", index + 1)
                                         )))
                             )
                             .child(
@@ -325,8 +330,8 @@ impl Workspace {
 
     fn settings(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex().gap_6()
-            .child(self.section_title("Preferences",
-                "Customize the workspace for your own product.", p))
+            .child(self.section_title("Appearance & layout",
+                "A small set of durable, device-specific preferences.", p))
             .child(
                 v_flex().gap_5().p_6().rounded_xl()
                     .border_1().border_color(rgb(p.border)).bg(rgb(p.surface))
@@ -344,24 +349,24 @@ impl Workspace {
                         Switch::new("sidebar-switch").label("Collapsed sidebar")
                             .checked(self.collapsed)
                             .on_change(cx.listener(|this, checked, _, cx| {
-                                this.collapsed = *checked; cx.notify();
+                                this.set_collapsed(*checked, cx);
                             }))
                     )
                     .child(div().h(px(1.)).bg(rgb(p.border)))
                     .child(div().text_sm().font_semibold().child("About"))
                     .child(div().text_sm().text_color(rgb(p.muted))
-                        .child("GPUI Kit Demo 0.2.0 · Rust · GPUI Kit 0.9.0"))
+                        .child("GPUI Kit Demo 0.3.0 · Rust · GPUI Kit 0.9.0"))
                     .child(div().text_xs().text_color(rgb(p.subtle))
                         .child("Appearance, sidebar and tasks are saved locally between sessions."))
             )
     }
 
-    fn composer(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex().w_full().gap_2().px_7().pt_3().pb_4()
-            .bg(rgb(p.surface)).border_t_1().border_color(rgb(p.border))
+    fn task_editor(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
+        v_flex().w_full().gap_3().p_5().rounded_lg()
+            .bg(rgb(p.surface)).border_1().border_color(rgb(p.border))
+            .child(div().text_sm().font_medium().child("New task"))
             .child(
-                h_flex().items_center().gap_3().p_3().rounded_xl()
-                    .bg(rgb(p.canvas)).border_1().border_color(rgb(p.border))
+                h_flex().items_center().gap_3()
                     .child(div().min_w_0().flex_1().child(Input::new(&self.input)))
                     .child(
                         Button::new("add-task").primary().label("Add task")
@@ -380,14 +385,26 @@ impl Workspace {
                             }))
                     )
             )
-            .child(
-                h_flex().items_center().justify_between()
-                    .child(div().text_xs().text_color(rgb(p.subtle))
-                        .child("Local workspace · No AI service or telemetry"))
-                    .child(div().text_xs().text_color(rgb(if self.save_error.is_some() { p.status_text } else { p.subtle }))
-                        .child(SharedString::from(self.save_error.as_ref().map(|e| format!("Save failed: {e}")).unwrap_or_else(|| "Saved on device · GPUI Kit 0.9".to_string()))))
-            )
+            .child(div().text_xs().text_color(rgb(p.subtle))
+                .child(SharedString::from(format!(
+                    "Saved automatically · {} / {} tasks", self.tasks.len(), storage::MAX_TASKS
+                ))))
     }
+
+    fn status_bar(&self, p: Palette) -> impl IntoElement {
+        h_flex().w_full().h(px(34.)).flex_shrink_0().px_7()
+            .items_center().justify_between()
+            .border_t_1().border_color(rgb(p.border)).bg(rgb(p.surface))
+            .child(div().text_xs().text_color(rgb(p.subtle))
+                .child("GPUI KIT · NATIVE DESKTOP"))
+            .child(div().text_xs()
+                .text_color(rgb(if self.save_error.is_some() { p.accent_ink } else { p.muted }))
+                .child(SharedString::from(
+                    self.save_error.as_ref().map(|err| format!("Save error: {err}"))
+                        .unwrap_or_else(|| "Local storage ready".to_string())
+                )))
+    }
+
 }
 
 impl Render for Workspace {
@@ -410,7 +427,7 @@ impl Render for Workspace {
                                     })
                             )
                     )
-                    .child(self.composer(p, cx))
+                    .child(self.status_bar(p))
             )
     }
 }
