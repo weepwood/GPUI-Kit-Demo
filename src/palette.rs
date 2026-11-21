@@ -39,7 +39,7 @@ mod tests {
 
     fn luminance(hex: u32) -> f64 {
         let channel = |shift| {
-            let value = ((hex >> shift) & 0xff) as f64 / 255.0;
+            let value = ((hex >> shift) & 0xffu32) as f64 / 255.0;
             if value <= 0.04045 { value / 12.92 } else { ((value + 0.055) / 1.055).powf(2.4) }
         };
         0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
