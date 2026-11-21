@@ -23,7 +23,7 @@ impl Palette {
         } else {
             Self {
                 canvas: 0xf6f7f3, surface: 0xfefefc, sidebar: 0xeff0eb,
-                text: 0x242b25, muted: 0x57615a, subtle: 0x737c73,
+                text: 0x242b25, muted: 0x57615a, subtle: 0x616b62,
                 border: 0xdde1d9, hover: 0xe6e9e2, selected: 0xdfe5db,
                 logo: 0x303d35, logo_text: 0xffffff, avatar: 0xd7dfd5,
                 status_bg: 0xe7efe9, status_text: 0x376547,
@@ -58,6 +58,8 @@ mod tests {
             assert!(contrast(p.text, p.canvas) >= 7.0);
             assert!(contrast(p.text, p.surface) >= 7.0);
             assert!(contrast(p.muted, p.surface) >= 4.5);
+            assert!(contrast(p.subtle, p.canvas) >= 4.5);
+            assert!(contrast(p.subtle, p.sidebar) >= 4.5);
             assert!(contrast(p.accent_ink, p.accent_soft) >= 4.5);
         }
     }
