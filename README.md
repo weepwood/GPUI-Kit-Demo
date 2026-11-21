@@ -1,89 +1,58 @@
 # GPUI Kit Demo
 
-**Rust 原生桌面应用脚手架 · Codex-inspired Workspace UI**
+**A native Rust workbench for exploring desktop UI patterns.**
 
 [![Build](https://github.com/weepwood/GPUI-Kit-Demo/actions/workflows/build.yml/badge.svg)](https://github.com/weepwood/GPUI-Kit-Demo/actions/workflows/build.yml)
 
-基于 **GPUI Kit 0.9.0** 的通用原生桌面脚手架，借鉴 Codex Desktop 的布局思路：灰白侧栏、简洁主工作区、轻量导航、底部任务输入区。不是 OpenAI 官方产品，也不复制其商标或素材。
+基于 [GPUI Kit](https://github.com/longbridge/gpui-kit) 的轻量原生桌面示例。界面采用克制的中性色、清晰的内容层级和少量暖色强调；重点展示可以直接复用的原生交互，不模拟聊天产品或 AI 助手。
 
-## 已有功能
+## 界面组成
 
-- 原生 GPUI 界面，无 Electron / WebView。
-- 可折叠侧栏、顶栏、主工作区、固定底部输入区。
-- Overview / Components / Activity / Settings 四个示例页面。
-- 内置 GPUI Kit Button、Icon、Input、Switch，具有真实交互。
-- 应用级颜色 Token：src/palette.rs；深色与浅色界面可切换。
-- 任务持久化和删除、按钮事件计数、页面导航。
-- Windows x64 ZIP + Inno Setup 安装器、macOS .app ZIP 自动构建与 Release。
+- **Home**：本地任务数与高频入口，不使用虚构的增长指标。
+- **Library**：原生 Button、Input、Switch 与设计 Token 预览，预览输入与任务编辑相互独立。
+- **Tasks**：输入、创建、删除本地任务；此处是任务编辑的唯一入口。
+- **Preferences**：浅色 / 深色模式与导航折叠状态，重启后保留。
+- **Status bar**：持续反馈本地保存状态，不占用内容区。
 
-**范围说明**：任务输入只会保存本地任务条目，不会启动 AI 任务或访问后端。任务与布局偏好保存在系统应用配置目录（JSON）；不上传数据。
+界面由 Rust + GPUI 原生渲染，无 Electron 或 WebView。任务、主题与侧栏偏好保存到系统配置目录的 JSON 文件中，不需要在线账号。
 
-## 环境
+完整颜色、排版、文案和交互约束见 [设计系统说明](docs/DESIGN_SYSTEM.md)，检查记录见 [UI 审查记录](docs/UI_AUDIT.md)。
 
-Rust stable（建议 Rust 1.92+ / edition 2024）。
+## 本地开发
 
-Windows 需要 Windows 10+、VS2022 C++ Build Tools、Windows SDK、CMake 及 MSVC Rust toolchain。macOS 需要 macOS 15+ 和 Xcode Command Line Tools。Linux 可参考 [GPUI Kit 官方安装说明](https://gpui-kit.com/docs/installation/) 配置 Vulkan/Wayland/X11 依赖。
+要求 Rust stable（edition 2024）；Windows 推荐 VS 2022 C++ Build Tools、Windows SDK 与 MSVC 工具链；macOS 需要 Xcode Command Line Tools。
 
-本地运行：
-
-~~~bash
+```bash
 cargo run
-~~~
-
-执行测试、生产构建：
-
-~~~bash
 cargo fmt --all
 cargo test
 cargo build --release
-~~~
+```
 
-## 项目结构
+## 发布与下载
 
-~~~text
-.
-├── .github/workflows/build.yml  # CI、安装包和 Release
-├── installer/
-│   ├── windows.iss              # Windows Inno Setup
-│   └── Info.plist               # macOS 应用元数据
-├── src/
-│   ├── main.rs                  # UI 页面与交互状态
-│   └── palette.rs               # 浅色/深色 Token
-├── Cargo.toml
-├── rust-toolchain.toml
-└── RELEASE_NOTES.md
-~~~
+[GitHub Releases](https://github.com/weepwood/GPUI-Kit-Demo/releases) 提供平台安装包；[GitHub Actions](https://github.com/weepwood/GPUI-Kit-Demo/actions/workflows/build.yml) 提供对应构建记录与 Artifact。
 
-## 开发与扩展
+| 平台 | 构建产物 |
+| --- | --- |
+| Windows x64 | `GPUI-Kit-Demo-Setup-Windows-x64.exe`、`GPUI-Kit-Demo-Windows-x64.zip` |
+| macOS Apple Silicon | `GPUI-Kit-Demo-macOS-arm64.zip`（包含 .app） |
+| macOS Intel | `GPUI-Kit-Demo-macOS-x86_64.zip`（包含 .app） |
 
-1. 在 Page 枚举中加入业务页面，将页面内容放到独立模块。
-2. 通过 nav_item 注册导航入口，并使用 cx.notify() 触发更新。
-3. 在 Palette 里集中维护产品视觉变量。
-4. 如需数据持久化，可替换内存 tasks 为 SQLite、文件或服务端 API。
-5. 投入正式产品前需要增加 UI 回归测试、不同 DPI 与无障碍验收。
+Pull Request 触发两平台编译与测试；推送主分支后，工作流从 `Cargo.toml` 读取版本并尝试创建对应的 `vX.Y.Z` 预发布版。如果同版本 Release 已经存在则不会覆盖。也支持推送匹配版本的 `v*` 标签。ZIP 和安装器中的版本号由 CI 同步，Release 包含 SHA256SUMS.txt。
 
-## v0.2.0 优化
+**重要**：构建自动化不等于产物已发布。只有 [Releases](https://github.com/weepwood/GPUI-Kit-Demo/releases) 页面出现新版本和完整附件才代表发布成功。Windows 安装程序未签名；macOS .app 未签名或公证，正式对外分发需要配备代码签名和公证流程。工作流创建 Release 需允许 `contents: write`，如仓库策略拒绝自带令牌，可配置 `RELEASE_TOKEN` Secret。
 
-- 恢复上次启动的浅色/深色主题、侧栏折叠状态和任务列表。
-- 切换主题时使用 `Theme::change` 同步 GPUI Kit 原生组件主题。
-- 任务支持删除；新增任务后清空输入框；限制任务数量和文本长度。
-- 保存出错时在底部状态栏反馈，新增配置数据规范化单元测试。
-- 只有版本标签触发公开 Release，避免 `main` 重复发布旧版本。
+## 工程结构
 
-## 发布
-
-向 main 分支推送或推送 v* 标签会触发 GitHub Actions。只有推送 `v*` 标签才发布 GitHub Release，普通 `main` 更新仅检查与产出 Actions Artifact。
-
-Windows 安装程序 **未进行代码签名**；macOS .app **未签名/未公证**。平台安全提示是预期情况，生产发布需配置证书。
-
-- 上游依赖：https://github.com/longbridge/gpui-kit
-- 文档：https://gpui-kit.com/
-- Codex 和 OpenAI 是相应所有者的商标，本项目与 OpenAI 无官方关系。
+```text
+src/main.rs                 GPUI 原生工作台与交互
+src/palette.rs              深浅色语义 Token 和对比度测试
+src/storage.rs              本地状态持久化与数据校验
+docs/DESIGN_SYSTEM.md       可复用设计约束和 AI 生成检查清单
+docs/UI_AUDIT.md            设计缺陷与修复记录
+.github/workflows/build.yml Windows/macOS 构建、校验、发布
+installer/                  Inno Setup、macOS plist
+```
 
 MIT License.
-
-## GitHub Release 发布权限
-
-已验证可下载的构建产物见 [Actions run #42366991597](https://github.com/weepwood/GPUI-Kit-Demo/actions/runs/42366991597) 的 `windows-x64` 和 `macos` Artifact。
-
-构建由 GitHub Actions 完成，但在 2026-11-07 尝试以工作流自带 `GITHUB_TOKEN` 创建 Release 时，GitHub 返回 `403 Resource not accessible by integration`。如需让发布自动完成，请检查仓库 **Settings → Actions → General → Workflow permissions**，并在必要时通过 **Settings → Secrets and variables → Actions** 配置具有本仓库 Contents 读写权限的专用 `RELEASE_TOKEN`（不要将令牌提交到代码库）。之后手动运行 **Publish validated v0.1.0 binaries** 工作流，即可直接复用上述已验证构建产物创建预发布版，无需重新编译。

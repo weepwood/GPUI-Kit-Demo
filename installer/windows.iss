@@ -1,5 +1,7 @@
 #define AppName "GPUI Kit Demo"
-#define AppVersion "0.1.0"
+#ifndef AppVersion
+#define AppVersion "0.3.0"
+#endif
 #define AppExeName "gpui-kit-demo.exe"
 
 [Setup]
