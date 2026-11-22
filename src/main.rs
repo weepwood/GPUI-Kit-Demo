@@ -1,3 +1,4 @@
+mod component_gallery;
 mod palette;
 mod storage;
 
@@ -10,6 +11,7 @@ use gpui_kit::component::{
 };
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
+use component_gallery::GalleryTab;
 use palette::Palette;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -18,7 +20,7 @@ enum Page { Overview, Components, Activity, Settings }
 impl Page {
     fn title(self) -> &'static str {
         match self {
-            Self::Overview => "Home", Self::Components => "Library",
+            Self::Overview => "Home", Self::Components => "UI Components",
             Self::Activity => "Tasks", Self::Settings => "Preferences",
         }
     }
@@ -29,6 +31,11 @@ struct Workspace {
     dark: bool,
     collapsed: bool,
     clicks: usize,
+    gallery_tab: GalleryTab,
+    gallery_switch: bool,
+    gallery_checkbox: bool,
+    gallery_selection: usize,
+    gallery_preview_text: String,
     tasks: Vec<String>,
     input: Entity<InputState>,
     playground_input: Entity<InputState>,
@@ -43,6 +50,8 @@ impl Workspace {
             .placeholder("Type to preview the native input"));
         Self {
             page: Page::Overview, dark: settings.dark, collapsed: settings.collapsed, clicks: 0,
+            gallery_tab: GalleryTab::Controls, gallery_switch: false, gallery_checkbox: false,
+            gallery_selection: 0, gallery_preview_text: String::new(),
             tasks: settings.tasks, input, playground_input, save_error,
         }
     }
@@ -108,7 +117,7 @@ impl Workspace {
                     .child("NAVIGATION")
             ))
             .child(self.menu_item("nav-overview", "Home", IconName::LayoutDashboard, Page::Overview, p, cx))
-            .child(self.menu_item("nav-components", "Library", IconName::GalleryVerticalEnd, Page::Components, p, cx))
+            .child(self.menu_item("nav-components", "UI Components", IconName::GalleryVerticalEnd, Page::Components, p, cx))
             .child(self.menu_item("nav-activity", "Tasks", IconName::Inbox, Page::Activity, p, cx))
             .child(div().h(px(18.)))
             .when(!self.collapsed, |el| el.child(
@@ -229,8 +238,8 @@ impl Workspace {
             .child(
                 v_flex().gap_3()
                     .child(div().text_sm().font_semibold().child("Explore the workspace"))
-                    .child(self.destination_row("overview-components", "Component library",
-                        "Inspect buttons, inputs, switches, and color roles",
+                    .child(self.destination_row("overview-components", "UI component gallery",
+                        "Explore native controls, interface patterns, and design tokens",
                         IconName::GalleryVerticalEnd, Page::Components, p, cx))
                     .child(self.destination_row("overview-preferences", "Appearance & layout",
                         "Switch themes and adjust the navigation",
@@ -238,70 +247,6 @@ impl Workspace {
             )
             .child(div().text_xs().text_color(rgb(p.subtle))
                 .child("A native desktop reference project. Everything runs locally."))
-    }
-
-    fn components(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex().gap_6()
-            .child(self.section_title("Component library",
-                "Native interaction patterns and their actual states.", p))
-            .child(
-                v_flex().gap_5().p_6().rounded_xl()
-                    .border_1().border_color(rgb(p.border)).bg(rgb(p.surface))
-                    .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("01  /  ACTIONS"))
-                    .child(div().text_sm().font_semibold().child("Buttons"))
-                    .child(
-                        h_flex().gap_3().items_center()
-                            .child(
-                                Button::new("primary-demo").primary().label("Primary action")
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        this.clicks += 1; cx.notify();
-                                    }))
-                            )
-                            .child(
-                                Button::new("secondary-demo").label("Secondary action")
-                                    .on_click(cx.listener(|this, _, _, cx| {
-                                        this.clicks += 1; cx.notify();
-                                    }))
-                            )
-                            .child(div().text_xs().text_color(rgb(p.muted))
-                                .child(SharedString::from(format!("{} clicks", self.clicks))))
-                    )
-                    .child(div().h(px(1.)).bg(rgb(p.border)))
-                    .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("02  /  ENTRY"))
-                    .child(div().text_sm().font_semibold().child("Text input"))
-                    .child(div().max_w(px(500.)).child(Input::new(&self.playground_input)))
-                    .child(div().h(px(1.)).bg(rgb(p.border)))
-                    .child(div().text_xs().font_semibold().text_color(rgb(p.accent_ink)).child("03  /  STATE"))
-                    .child(div().text_sm().font_semibold().child("Toggle"))
-                    .child(
-                        Switch::new("collapse-switch").label("Collapse sidebar")
-                            .checked(self.collapsed)
-                            .on_change(cx.listener(|this, checked, _, cx| {
-                                this.set_collapsed(*checked, cx);
-                            }))
-                    )
-                    .child(div().text_xs().text_color(rgb(p.subtle))
-                        .child("Each control updates live state; no simulated responses."))
-                    .child(div().h(px(1.)).bg(rgb(p.border)))
-                    .child(div().text_xs().font_semibold()
-                        .text_color(rgb(p.accent_ink)).child("04  /  COLOR ROLES"))
-                    .child(div().text_sm().font_semibold().child("Surface palette"))
-                    .child(
-                        h_flex().gap_3().items_center()
-                            .child(v_flex().gap_2()
-                                .child(div().w(px(86.)).h(px(46.)).rounded_md()
-                                    .bg(rgb(p.canvas)).border_1().border_color(rgb(p.border)))
-                                .child(div().text_xs().text_color(rgb(p.muted)).child("Canvas")))
-                            .child(v_flex().gap_2()
-                                .child(div().w(px(86.)).h(px(46.)).rounded_md()
-                                    .bg(rgb(p.sidebar)).border_1().border_color(rgb(p.border)))
-                                .child(div().text_xs().text_color(rgb(p.muted)).child("Sidebar")))
-                            .child(v_flex().gap_2()
-                                .child(div().w(px(86.)).h(px(46.)).rounded_md()
-                                    .bg(rgb(p.accent_soft)).border_1().border_color(rgb(p.border)))
-                                .child(div().text_xs().text_color(rgb(p.muted)).child("Accent")))
-                    )
-            )
     }
 
     fn activity(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
@@ -443,7 +388,7 @@ impl Render for Workspace {
                                 v_flex().w_full().max_w(px(1050.)).p_7()
                                     .child(match self.page {
                                         Page::Overview => self.overview(p, cx).into_any_element(),
-                                        Page::Components => self.components(p, cx).into_any_element(),
+                                        Page::Components => self.component_gallery(p, cx).into_any_element(),
                                         Page::Activity => self.activity(p, cx).into_any_element(),
                                         Page::Settings => self.settings(p, cx).into_any_element(),
                                     })
