@@ -1,5 +1,8 @@
 # GPUI Kit Demo
 
+<img width="2678" height="1692" alt="image" src="https://github.com/user-attachments/assets/48785e30-bc25-4724-834e-08bd7e7d3a5c" />
+
+
 **A native Rust workbench for exploring desktop UI patterns.**
 
 [![Build](https://github.com/weepwood/GPUI-Kit-Demo/actions/workflows/build.yml/badge.svg)](https://github.com/weepwood/GPUI-Kit-Demo/actions/workflows/build.yml)
