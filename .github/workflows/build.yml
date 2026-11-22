@@ -40,11 +40,26 @@ jobs:
           if (-not $version) { throw "Unable to resolve app version" }
           & $iscc "/DAppVersion=$version" installer/windows.iss
           if ($LASTEXITCODE -ne 0) { throw "Installer packaging failed" }
-      - uses: actions/upload-artifact@v4
+      - name: Upload Windows artifacts
+        id: upload_first
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
           name: windows-x64
           path: dist/*
           if-no-files-found: error
+      - name: Wait before retrying artifact upload
+        if: steps.upload_first.outcome == 'failure'
+        shell: pwsh
+        run: Start-Sleep -Seconds 30
+      - name: Retry Windows artifact upload
+        if: steps.upload_first.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: dist/*
+          if-no-files-found: error
+          overwrite: true
 
   macos:
     name: macOS ${{ matrix.arch }} app bundle
@@ -82,11 +97,26 @@ jobs:
           arch="$(uname -m)"
           ditto -c -k --sequesterRsrc --keepParent "$app" "dist/GPUI-Kit-Demo-macOS-$arch.zip"
           rm -rf "$app"
-      - uses: actions/upload-artifact@v4
+      - name: Upload macOS artifacts
+        id: upload_first
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.arch }}
           path: dist/*.zip
           if-no-files-found: error
+      - name: Wait before retrying artifact upload
+        if: steps.upload_first.outcome == 'failure'
+        shell: bash
+        run: sleep 30
+      - name: Retry macOS artifact upload
+        if: steps.upload_first.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: dist/*.zip
+          if-no-files-found: error
+          overwrite: true
 
   release:
     name: Publish GitHub Release
@@ -100,6 +130,20 @@ jobs:
           pattern: "*"
           path: dist
           merge-multiple: true
+      - name: Verify complete platform packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            GPUI-Kit-Demo-Setup-Windows-x64.exe \
+            GPUI-Kit-Demo-Windows-x64.zip \
+            GPUI-Kit-Demo-macOS-arm64.zip \
+            GPUI-Kit-Demo-macOS-x86_64.zip; do
+            if [[ ! -s "dist/$file" ]]; then
+              echo "::error::Missing or empty release file: $file" >&2
+              exit 1
+            fi
+          done
       - name: Publish initial or tagged release
         shell: bash
         env:
