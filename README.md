@@ -12,7 +12,7 @@
 ## 界面组成
 
 - **Home**：本地任务数与高频入口，不使用虚构的增长指标。
-- **Library**：原生 Button、Input、Switch 与设计 Token 预览，预览输入与任务编辑相互独立。
+- **UI Components**：按 Controls / Patterns / Foundations 分类展示原生 Button、Input、Switch、Checkbox、导航、状态反馈、排版与语义色板；组件示例均可交互，预览状态与任务编辑互不干扰。
 - **Tasks**：输入、创建、删除本地任务；此处是任务编辑的唯一入口。
 - **Preferences**：浅色 / 深色模式与导航折叠状态，重启后保留。
 - **Status bar**：持续反馈本地保存状态，不占用内容区。
@@ -49,7 +49,8 @@ Pull Request 触发两平台编译与测试；推送主分支后，工作流从 
 ## 工程结构
 
 ```text
-src/main.rs                 GPUI 原生工作台与交互
+src/main.rs                 GPUI 原生工作台、导航和状态管理
+src/component_gallery.rs    可分类切换的交互式原生 UI 组件画廊
 src/palette.rs              深浅色语义 Token 和对比度测试
 src/storage.rs              本地状态持久化与数据校验
 docs/DESIGN_SYSTEM.md       可复用设计约束和 AI 生成检查清单
