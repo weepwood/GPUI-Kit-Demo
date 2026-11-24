@@ -122,6 +122,8 @@ struct Workspace {
     progress_value: f32,
     /// Focus home of the workbench root; action dispatch rides the focus path.
     focus: FocusHandle,
+    /// Id of the destination row currently hovered, for the arrow nudge.
+    hovered_destination: Option<&'static str>,
 }
 
 impl Workspace {
@@ -169,6 +171,7 @@ impl Workspace {
             progress,
             progress_value: 40.,
             focus: cx.focus_handle(),
+            hovered_destination: None,
         }
     }
 
@@ -585,6 +588,7 @@ impl Workspace {
             icon,
             page,
         } = destination;
+        let hovered = self.hovered_destination == Some(id);
         h_flex()
             .id(id)
             .w_full()
@@ -599,6 +603,19 @@ impl Workspace {
             .border_1()
             .border_color(rgb(p.border))
             .hover(move |s| s.bg(rgb(p.hover)))
+            .on_hover(cx.listener(move |this, is_hovered: &bool, _, cx| {
+                // Clear only if this row is still the tracked one, so sliding
+                // between adjacent rows never wipes the state out of order.
+                if *is_hovered {
+                    if this.hovered_destination != Some(id) {
+                        this.hovered_destination = Some(id);
+                        cx.notify();
+                    }
+                } else if this.hovered_destination == Some(id) {
+                    this.hovered_destination = None;
+                    cx.notify();
+                }
+            }))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.page = page;
                 cx.notify();
@@ -622,7 +639,13 @@ impl Workspace {
                     .child(div().text_sm().font_medium().child(title))
                     .child(div().text_xs().text_color(rgb(p.muted)).child(description)),
             )
-            .child(Icon::new(IconName::ArrowRight).text_color(rgb(p.subtle)))
+            .child(
+                Icon::new(IconName::ArrowRight)
+                    .when(hovered, |arrow| {
+                        arrow.ml(px(2.)).text_color(rgb(p.accent_ink))
+                    })
+                    .text_color(rgb(p.subtle)),
+            )
     }
 
     fn overview(&self, p: Palette, cx: &mut Context<Self>) -> Div {
@@ -893,6 +916,7 @@ impl Workspace {
                         let index = self.tasks.len() - 1 - i;
                         let done = task.done;
                         h_flex()
+                            .id(SharedString::from(format!("task-row-{index}")))
                             .gap_3()
                             .px_5()
                             .py(row_pad)
@@ -900,6 +924,7 @@ impl Workspace {
                             .when(index != self.tasks.len() - 1, |el| {
                                 el.border_t_1().border_color(rgb(p.border))
                             })
+                            .hover(move |s| s.bg(rgb(p.hover)))
                             .child(
                                 Checkbox::new(SharedString::from(format!("task-done-{index}")))
                                     .checked(done)

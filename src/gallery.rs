@@ -374,6 +374,25 @@ impl Workspace {
                         p,
                     ))
                     .child(divider(p))
+                    .child(field_label("TOOLTIP", p))
+                    .child(
+                        h_flex()
+                            .flex_wrap()
+                            .gap_3()
+                            .items_center()
+                            .child(
+                                Button::new("tooltip-demo")
+                                    .label("Hover me")
+                                    .tooltip("Tooltips appear after a short hover delay"),
+                            )
+                            .child(
+                                Button::new("tooltip-icon-demo")
+                                    .ghost()
+                                    .icon(IconName::Info)
+                                    .tooltip("Icon buttons carry tooltips too"),
+                            ),
+                    )
+                    .child(divider(p))
                     .child(field_label("BUNDLED ICONS", p))
                     .child(
                         h_flex().flex_wrap().gap_2().children(
