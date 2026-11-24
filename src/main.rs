@@ -23,6 +23,30 @@ use palette::Palette;
 use std::time::Duration;
 use storage::MAX_TASKS;
 
+// Window navigation actions, bound globally at startup. The Library page
+// documents these same bindings.
+gpui_kit::actions!(
+    workspace,
+    [
+        NavigateHome,
+        NavigateLibrary,
+        NavigateTasks,
+        NavigatePreferences,
+        FocusNewTask,
+        ToggleSidebar,
+    ]
+);
+
+/// One navigation card on the Home page.
+#[derive(Clone)]
+struct Destination {
+    id: &'static str,
+    title: &'static str,
+    description: &'static str,
+    icon: IconName,
+    page: Page,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Page {
     Overview,
@@ -96,6 +120,8 @@ struct Workspace {
     density: usize,
     progress: Entity<SliderState>,
     progress_value: f32,
+    /// Focus home of the workbench root; action dispatch rides the focus path.
+    focus: FocusHandle,
 }
 
 impl Workspace {
@@ -142,6 +168,7 @@ impl Workspace {
             density: 0,
             progress,
             progress_value: 40.,
+            focus: cx.focus_handle(),
         }
     }
 
@@ -547,14 +574,17 @@ impl Workspace {
 
     fn destination_row(
         &self,
-        id: &'static str,
-        title: &'static str,
-        description: &'static str,
-        icon: IconName,
-        page: Page,
+        destination: Destination,
         p: Palette,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let Destination {
+            id,
+            title,
+            description,
+            icon,
+            page,
+        } = destination;
         h_flex()
             .id(id)
             .w_full()
@@ -766,20 +796,24 @@ impl Workspace {
                                     .child("Explore the workspace"),
                             )
                             .child(self.destination_row(
-                                "overview-components",
-                                "Design kit",
-                                "Buttons, inputs, selection, indicators, feedback and color roles",
-                                IconName::GalleryVerticalEnd,
-                                Page::Components,
+                                Destination {
+                                    id: "overview-components",
+                                    title: "Design kit",
+                                    description: "Buttons, inputs, selection, indicators, feedback and color roles",
+                                    icon: IconName::GalleryVerticalEnd,
+                                    page: Page::Components,
+                                },
                                 p,
                                 cx,
                             ))
                             .child(self.destination_row(
-                                "overview-preferences",
-                                "Appearance & layout",
-                                "Theme, motion, frosted glass and navigation",
-                                IconName::Settings,
-                                Page::Settings,
+                                Destination {
+                                    id: "overview-preferences",
+                                    title: "Appearance & layout",
+                                    description: "Theme, motion, frosted glass and navigation",
+                                    icon: IconName::Settings,
+                                    page: Page::Settings,
+                                },
                                 p,
                                 cx,
                             )),
@@ -999,7 +1033,10 @@ impl Workspace {
                             div()
                                 .text_sm()
                                 .text_color(rgb(p.muted))
-                                .child("GPUI Kit Demo 0.3.0 · Rust · GPUI Kit 0.9.0"),
+                                .child(SharedString::from(format!(
+                                    "GPUI Kit Demo {} · Rust · GPUI Kit 0.9.0",
+                                    env!("CARGO_PKG_VERSION")
+                                ))),
                         ),
                     )
                     .child(div().text_xs().text_color(rgb(p.subtle)).child(
@@ -1119,9 +1156,36 @@ impl Page {
 impl Render for Workspace {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let p = Palette::new(self.dark);
-        // The root paints nothing: the frosted window backdrop shows through
-        // the translucent sidebar and canvas layers instead.
+        // Actions are registered here on purpose: element-level handlers may
+        // only be attached during paint, where this render runs every frame.
         h_flex()
+            .id("workspace-root")
+            .track_focus(&self.focus)
+            .on_action(cx.listener(|this, _: &NavigateHome, _, cx| {
+                this.page = Page::Overview;
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &NavigateLibrary, _, cx| {
+                this.page = Page::Components;
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &NavigateTasks, _, cx| {
+                this.page = Page::Activity;
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &NavigatePreferences, _, cx| {
+                this.page = Page::Settings;
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &FocusNewTask, window, cx| {
+                this.page = Page::Activity;
+                let handle = this.input.read(cx).focus_handle(cx);
+                window.focus(&handle, cx);
+                cx.notify();
+            }))
+            .on_action(cx.listener(|this, _: &ToggleSidebar, _, cx| {
+                this.set_collapsed(!this.collapsed, cx);
+            }))
             .size_full()
             .text_color(rgb(p.text))
             .child(self.sidebar(p, cx))
@@ -1171,6 +1235,7 @@ impl Render for Workspace {
 fn main() {
     gpui_kit::application().with_assets(Assets).run(|cx| {
         gpui_kit::init(cx);
+
         let (settings, save_error) = match storage::load() {
             Ok(settings) => (settings, None),
             Err(err) => {
@@ -1181,6 +1246,7 @@ fn main() {
                 )
             }
         };
+        cx.bind_keys(static_action_bindings());
         Theme::change(
             if settings.dark {
                 ThemeMode::Dark
@@ -1193,6 +1259,11 @@ fn main() {
         palette::apply_theme_overrides(cx);
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1220.), px(800.)), cx)),
+            titlebar: Some(TitlebarOptions {
+                title: Some(SharedString::from("GPUI Kit Demo")),
+                ..Default::default()
+            }),
+            window_min_size: Some(size(px(720.), px(480.))),
             // Native acrylic (Windows) / material (macOS) behind translucent
             // areas. Toggled at runtime from Preferences via
             // `Window::set_background_appearance`.
@@ -1208,4 +1279,17 @@ fn main() {
         })
         .expect("Failed to open GPUI Kit Demo");
     });
+}
+
+/// The keybindings documented by the Library page, all live.
+fn static_action_bindings() -> Vec<KeyBinding> {
+    vec![
+        KeyBinding::new("ctrl-1", NavigateHome, None),
+        KeyBinding::new("ctrl-2", NavigateLibrary, None),
+        KeyBinding::new("ctrl-3", NavigateTasks, None),
+        KeyBinding::new("ctrl-4", NavigatePreferences, None),
+        KeyBinding::new("ctrl-n", FocusNewTask, None),
+        KeyBinding::new("ctrl-b", ToggleSidebar, None),
+        KeyBinding::new("ctrl-,", NavigatePreferences, None),
+    ]
 }

@@ -355,19 +355,22 @@ impl Workspace {
                             .child(Tag::danger().child("Danger")),
                     )
                     .child(divider(p))
-                    .child(field_label("KEYBINDING CHIPS", p))
+                    .child(field_label("APP SHORTCUTS", p))
                     .child(
                         h_flex()
                             .flex_wrap()
-                            .gap_2()
+                            .gap_3()
                             .items_center()
-                            .child(Kbd::new(Keystroke::parse("ctrl-n").unwrap()))
-                            .child(Kbd::new(Keystroke::parse("ctrl-,").unwrap()))
-                            .child(Kbd::new(Keystroke::parse("ctrl-shift-p").unwrap())),
+                            .child(shortcut("Home", "ctrl-1", p))
+                            .child(shortcut("Library", "ctrl-2", p))
+                            .child(shortcut("Tasks", "ctrl-3", p))
+                            .child(shortcut("Preferences", "ctrl-4", p))
+                            .child(shortcut("New task", "ctrl-n", p))
+                            .child(shortcut("Sidebar", "ctrl-b", p)),
                     )
                     .child(caption(
-                        "Key chips present the binding style only — this demo does not \
-                             register those shortcuts.",
+                        "Every binding above is registered in this build — press one to \
+                             try the live navigation, focus and sidebar actions.",
                         p,
                     ))
                     .child(divider(p))
@@ -587,4 +590,13 @@ fn pill_dynamic(text: &str, p: Palette) -> Div {
 
 fn capacity_percent(len: usize) -> f32 {
     (len as f32 / MAX_TASKS as f32) * 100.
+}
+
+/// A labeled keybinding chip; every binding shown here is live.
+fn shortcut(label: &'static str, keys: &'static str, p: Palette) -> Div {
+    h_flex()
+        .gap_2()
+        .items_center()
+        .child(div().text_xs().text_color(rgb(p.muted)).child(label))
+        .child(Kbd::new(Keystroke::parse(keys).unwrap()))
 }

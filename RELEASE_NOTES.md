@@ -1,3 +1,14 @@
+# GPUI Kit Demo v0.4.0 — Workbench polish
+
+- 全局快捷键：`Ctrl+1..4` 页面导航、`Ctrl+N` 新建任务并聚焦输入、`Ctrl+B` 折叠侧栏、`Ctrl+,` 打开偏好设置；Library 页展示的绑定全部真实可用。
+- 任务支持完成态：勾选完成显示删除线与弱化，计数随 `Saved tasks · n (m done)` 联动；旧版纯字符串任务文件自动迁移为 `{title, done}`，无数据丢失。
+- Home 页显示最近 3 条真实任务预览与完成度；窗口启用原生毛玻璃背景（Windows Acrylic / macOS Vibrancy），可在 Preferences 中即时切换。
+- 页面切换与侧栏折叠带语义动效（可在偏好中关闭）；统一界面 4px 间距节奏。
+- 窗口标题显式设置，最小窗口尺寸 720×480；版本号统一为 0.4.0（Cargo.toml、Inno Setup、Info.plist 一致），关于页读取编译期版本。
+- `Cargo.lock` 纳入版本控制，保证各平台构建依赖一致。
+
+---
+
 # GPUI Kit Demo v0.3.0 — Workbench refinement
 
 - 移除常驻聊天式输入区，任务编辑回到 Tasks 页面；首页改为真实本地状态与功能导航。

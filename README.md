@@ -34,6 +34,15 @@ cargo test
 cargo build --release
 ```
 
+### 快捷键
+
+| 按键 | 功能 |
+| --- | --- |
+| `Ctrl+1..4` | 切换 Home / Library / Tasks / Preferences |
+| `Ctrl+N` | 跳转任务页并聚焦新建输入 |
+| `Ctrl+B` | 折叠 / 展开侧栏 |
+| `Ctrl+,` | 打开偏好设置 |
+
 ## 发布与下载
 
 [GitHub Releases](https://github.com/weepwood/GPUI-Kit-Demo/releases) 提供平台安装包；[GitHub Actions](https://github.com/weepwood/GPUI-Kit-Demo/actions/workflows/build.yml) 提供对应构建记录与 Artifact。
