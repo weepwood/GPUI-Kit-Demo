@@ -1,3 +1,16 @@
+# GPUI Kit Demo v0.5.0 — 可测试性与开发者工具
+
+- 新增 Developer 页（侧栏 SYSTEM 区 / `Ctrl+5`）：运行环境、渲染与点击计数、配置文件路径与体积、当前状态 JSON 预览与复制、二次确认的清理操作。
+- 内置元素检查器露出水面：debug 构建默认可用，`Ctrl+Shift+I`（macOS `Cmd+Alt+I`）即可拾取元素树；Developer 页提供一键开关。
+- 拆出 library crate：`src/lib.rs` 承载工作台，`src/main.rs` 只调用 `run()`，界面现在可以被测试直接挂载。
+- 新增 30 个无头 UI 用例（导航 / 任务 / 偏好 / Library / Developer / 布局），全部通过真实点击、快捷键与语义属性断言；替换掉「只跑通编译」的检查。
+- 引入测试基础设施：`Fixture`（固定 1220×800 窗口 + 临时配置目录）、`scroll_to`、`click_and_focus`、布局不变量断言；storage 支持路径注入，测试不再污染真实用户配置。
+- 工程门禁加强：CI 从 `cargo fmt`（只格式化不校验）改为 `--check`，并新增 `clippy --all-targets -D warnings` 与 `test --features gpui-kit/test-support`；新增 `.cargo/config.toml` 别名、`docs/TESTING.md`、`docs/DEVTOOLS.md`、`CONTRIBUTING.md`。
+- 版本号统一到 0.5.0（Cargo.toml、Inno Setup、Info.plist）。
+- 依赖兜底：上游 `proptest 1.12.0` 需要尚未发布的 `rand_xorshift 0.5`，仓库用 `[patch.crates-io]` + `vendor/rand-xorshift` 让测试构建可解析（上游发布后可删）。
+
+---
+
 # GPUI Kit Demo v0.4.0 — Workbench polish
 
 - 全局快捷键：`Ctrl+1..4` 页面导航、`Ctrl+N` 新建任务并聚焦输入、`Ctrl+B` 折叠侧栏、`Ctrl+,` 打开偏好设置；Library 页展示的绑定全部真实可用。

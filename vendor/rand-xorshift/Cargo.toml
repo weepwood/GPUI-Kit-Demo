@@ -1,0 +1,10 @@
+[package]
+name = "rand_xorshift"
+version = "0.5.0"
+edition = "2021"
+description = "XorShift128+ generator for rand 0.10, published here to fill a gap in the crates.io graph"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+rand_core = { version = "0.10", default-features = false }

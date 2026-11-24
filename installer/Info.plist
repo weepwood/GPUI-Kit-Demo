@@ -5,8 +5,8 @@
     <key>CFBundleName</key><string>GPUI Kit Demo</string>
     <key>CFBundleDisplayName</key><string>GPUI Kit Demo</string>
     <key>CFBundleIdentifier</key><string>io.github.weepwood.gpui-kit-demo</string>
-    <key>CFBundleVersion</key><string>0.4.0</string>
-    <key>CFBundleShortVersionString</key><string>0.4.0</string>
+    <key>CFBundleVersion</key><string>0.5.0</string>
+    <key>CFBundleShortVersionString</key><string>0.5.0</string>
     <key>CFBundleExecutable</key><string>gpui-kit-demo</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSHighResolutionCapable</key><true/>

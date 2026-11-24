@@ -1,3 +1,24 @@
+# UI review · 2026-11-24（第四轮：可测试性与开发者工具）
+
+| 位置 | 实测代码发现 | 修改 |
+| --- | --- | --- |
+| Library 头部 | 与其他页面结构不一致，缺少 `page-title` / `page-eyebrow` 语义 | 标题与引导语补同样的 id 与 aria_label，页面契约统一 |
+| 密度单选 | `RadioGroup` 用序号重写子元素 id，界面元素无法被定位 | 单选组外包一层 `density-control`（id + aria），保持只读语义 |
+| 滚动区 | `overflow_y_scrollbar()` 吞掉子元素 id，内容区没有稳定身份 | 外层包一层 `workspace-scroll`，滚动仍在内层，几何可测 |
+| 页脚状态 | 保存状态只靠颜色区分 | 状态栏补 `aria_label`（“Local storage ready” / 具体错误） |
+| 新增 Developer 页 | 调试信息此前只能看终端 | 运行环境、计数、配置路径、状态 JSON、检查器开关、演示触发器集中展示 |
+| 破坏性操作 | 「清理」类按钮点了就执行 | 统一改为二次点击确认，第一次点击变成危险色提示 |
+| 工程结构 | 仅 bin crate，界面无法被测试挂载 | 拆出 `src/lib.rs`，`main.rs` 只调用 `run()` |
+
+## 验证范围
+
+- 30 个无头 UI 用例（导航 6 / 任务 8 / 偏好 7 / Library 5 / Developer 7 / 布局 5）+ 8 个单元测试，均为真实点击、快捷键与语义断言。
+- 几何断言要求关闭动效一帧即终态，因此测量类用例统一使用 `Fixture::open_calm`。
+- `cargo fmt-check`、`cargo check-all`、`cargo t` 三条门禁全部在本地通过；CI 同配置。
+- 仍待真实桌面验收：多 DPI、系统 reduced-motion、触控板手势、元素检查器与 Inspector feature 的 release 组合。
+
+---
+
 # UI review · 2026-11-24（第三轮：完成态、信息密度与节奏）
 
 | 位置 | 实测代码发现 | 修改 |

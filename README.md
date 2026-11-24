@@ -15,6 +15,7 @@
 - **Library**：六节组件画廊（Actions / Entry / Selection / Indicators / Feedback / Color roles），全部示例绑定真实状态；含 18 个内嵌 Lucide 图标的展示网格。
 - **Tasks**：输入、创建、勾选完成、删除本地任务；行距密度跟随 Library 中的演示设置，任务以 `{title, done}` 结构持久化并兼容旧版纯字符串格式。
 - **Preferences**：浅色 / 深色模式、导航折叠、界面动效与原生毛玻璃背景开关，重启后保留；显示真实配置文件路径。
+- **Developer**：运行环境（版本、build、平台、视口与缩放）、渲染/点击/保存计数、配置文件路径与体积、当前状态 JSON 预览与复制、二次确认的清理操作，以及元素检查器与动效触发器。
 - **Status bar**：持续反馈本地保存状态，不占用内容区。
 
 窗口默认启用系统原生模糊背景（Windows 11 Acrylic / macOS Vibrancy），侧栏与画布以半透明层级透出；可以在 Preferences 中一键关闭并持久化。页面切换与侧栏折叠带有克制的过渡动画，同样可在 Preferences 中关闭。
@@ -28,20 +29,24 @@
 要求 Rust stable（edition 2024）；Windows 推荐 VS 2022 C++ Build Tools、Windows SDK 与 MSVC 工具链；macOS 需要 Xcode Command Line Tools。
 
 ```bash
-cargo run
-cargo fmt --all
-cargo test
+cargo run                 # 调试版默认带元素检查器
+cargo t                   # 单元测试 + 无头 UI 测试（等价于 --features gpui-kit/test-support）
+cargo fmt-check           # 只校验格式，不改文件
+cargo check-all           # clippy --all-targets -D warnings
 cargo build --release
 ```
+
+别名定义在 `.cargo/config.toml`。UI 测试必须开启 `gpui-kit/test-support`，否则元素注册表为空、用例会明确报错提示。测试写法、可测试元素约定与常见坑见 [测试指南](docs/TESTING.md)；检查器、Developer 页与 `gpui-fast` 等开关见 [开发者工具](docs/DEVTOOLS.md)。
 
 ### 快捷键
 
 | 按键 | 功能 |
 | --- | --- |
-| `Ctrl+1..4` | 切换 Home / Library / Tasks / Preferences |
+| `Ctrl+1..5` | 切换 Home / Library / Tasks / Preferences / Developer |
 | `Ctrl+N` | 跳转任务页并聚焦新建输入 |
 | `Ctrl+B` | 折叠 / 展开侧栏 |
 | `Ctrl+,` | 打开偏好设置 |
+| `Ctrl+Shift+I` | 切换元素检查器（仅 debug 构建；macOS 为 `Cmd+Alt+I`）|
 
 ## 发布与下载
 
@@ -60,13 +65,20 @@ Pull Request 触发两平台编译与测试；推送主分支后，工作流从 
 ## 工程结构
 
 ```text
-src/main.rs                 GPUI 原生工作台与交互
+src/main.rs                 可执行入口（仅调用库的 run()）
+src/lib.rs                  GPUI 原生工作台与交互（可被测试直接挂载）
 src/gallery.rs              Library 组件画廊（六节展示，绑定真实状态）
 src/kit.rs                  可复用设计构件：卡片、舞台、标题、胶囊、设置行等
 src/palette.rs              深浅色语义 Token、主题色同步与对比度测试
 src/storage.rs              本地状态持久化与数据校验
+tests/common/mod.rs         无头 UI 测试 fixture（固定窗口、临时配置目录）
+tests/{navigation,tasks,preferences,library,developer,layout}.rs
+                            46 个无头 UI 用例：真实点击、快捷键、语义与布局断言
 docs/DESIGN_SYSTEM.md       可复用设计约束和 AI 生成检查清单
 docs/UI_AUDIT.md            设计缺陷与修复记录
+docs/TESTING.md             无头 UI 测试指南与元素 id 约定
+docs/DEVTOOLS.md            元素检查器、Developer 页与调试开关
+vendor/rand-xorshift        临时补丁 crate（补齐 proptest 缺失的依赖，见 DEVTOOLS.md）
 .github/workflows/build.yml Windows/macOS 构建、校验、发布
 installer/                  Inno Setup、macOS plist
 ```

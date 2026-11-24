@@ -14,11 +14,12 @@
 //! - [`divider`] 1px separator
 
 use crate::palette::Palette;
+use gpui_kit::StatefulInteractiveElement as _;
 use gpui_kit::base::StyledExt as _;
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::component::{Icon, IconName, h_flex, v_flex};
 use gpui_kit::{
-    Div, InteractiveElement, IntoElement, ParentElement, SharedString, Stateful, Styled, div, px,
-    rgb,
+    Div, InteractiveElement, IntoElement, ParentElement, SharedString, Styled, div, px, rgb,
 };
 
 /// Outer container that hosts real content: Surface fill, hairline border,
@@ -122,7 +123,7 @@ pub fn setting_row(
     desc: &'static str,
     p: Palette,
     control: impl IntoElement,
-) -> Stateful<Div> {
+) -> impl IntoElement {
     div()
         .id(id)
         .w_full()
@@ -154,6 +155,8 @@ pub fn setting_row(
                 .child(div().text_xs().text_color(rgb(p.muted)).child(desc)),
         )
         .child(control.into_any_element())
+        .test_support()
+        .aria_label(title)
 }
 
 /// Semantic color preview: swatch, role name and hex value of the current mode.

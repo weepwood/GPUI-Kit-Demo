@@ -7,6 +7,7 @@ use crate::kit::{caption, card, divider, field_label, pill, section_head, stage,
 use crate::palette::Palette;
 use crate::storage::MAX_TASKS;
 use gpui_kit::base::StyledExt as _;
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::component::{
     Disableable, Icon, IconName, Sizable,
     badge::Badge,
@@ -26,6 +27,7 @@ use gpui_kit::component::{
 };
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::{Div, Keystroke, ParentElement, SharedString, Styled, div, px, rgb};
+use gpui_kit::{InteractiveElement as _, StatefulInteractiveElement as _};
 
 impl Workspace {
     /// The Library page: a live showcase of every reusable control pattern.
@@ -37,12 +39,23 @@ impl Workspace {
                     .gap_3()
                     .child(
                         div()
+                            .id("page-eyebrow")
+                            .test_support()
+                            .aria_label("COMPONENT LIBRARY")
                             .text_xs()
                             .font_semibold()
                             .text_color(rgb(p.accent_ink))
                             .child("COMPONENT LIBRARY"),
                     )
-                    .child(div().text_2xl().font_semibold().child("Design kit"))
+                    .child(
+                        div()
+                            .id("page-title")
+                            .test_support()
+                            .aria_label("Design kit")
+                            .text_2xl()
+                            .font_semibold()
+                            .child("Design kit"),
+                    )
                     .child(
                         div()
                             .text_sm()
@@ -213,9 +226,22 @@ impl Workspace {
                             .flex_wrap()
                             .gap_3()
                             .items_center()
-                            .child(div().w(px(360.)).child(Input::new(&self.playground_input)))
+                            .child(
+                                div().w(px(360.)).child(
+                                    Input::new(&self.playground_input)
+                                        .id("library-input")
+                                        .aria_label("Controlled input"),
+                                ),
+                            )
                             .when(self.show_counts, |row| {
-                                row.child(pill_dynamic(&format!("Characters: {characters}"), p))
+                                row.child(
+                                    pill_dynamic(&format!("Characters: {characters}"), p)
+                                        .id("library-characters")
+                                        .test_support()
+                                        .aria_label(SharedString::from(format!(
+                                            "{characters} characters"
+                                        ))),
+                                )
                             }),
                     )
                     .child(caption(
@@ -282,14 +308,25 @@ impl Workspace {
                     .child(divider(p))
                     .child(field_label("RADIO GROUP", p))
                     .child(
-                        RadioGroup::horizontal("density-radio")
-                            .child(Radio::new("density-comfortable").label("Comfortable rows"))
-                            .child(Radio::new("density-compact").label("Compact rows"))
-                            .selected_index(Some(density))
-                            .on_change(cx.listener(|this, index, _, cx| {
-                                this.density = *index;
-                                cx.notify();
-                            })),
+                        // `RadioGroup` re-keys its children by index, so the
+                        // group is wrapped in an identified element: that is
+                        // what a test (or the inspector) can point at.
+                        div()
+                            .id("density-control")
+                            .test_support()
+                            .aria_label("Row density")
+                            .child(
+                                RadioGroup::horizontal("density-radio")
+                                    .child(
+                                        Radio::new("density-comfortable").label("Comfortable rows"),
+                                    )
+                                    .child(Radio::new("density-compact").label("Compact rows"))
+                                    .selected_index(Some(density))
+                                    .on_change(cx.listener(|this, index, _, cx| {
+                                        this.density = *index;
+                                        cx.notify();
+                                    })),
+                            ),
                     )
                     .child(caption(
                         "The density choice changes the row padding of the real task list on \
@@ -365,8 +402,10 @@ impl Workspace {
                             .child(shortcut("Library", "ctrl-2", p))
                             .child(shortcut("Tasks", "ctrl-3", p))
                             .child(shortcut("Preferences", "ctrl-4", p))
+                            .child(shortcut("Developer", "ctrl-5", p))
                             .child(shortcut("New task", "ctrl-n", p))
-                            .child(shortcut("Sidebar", "ctrl-b", p)),
+                            .child(shortcut("Sidebar", "ctrl-b", p))
+                            .child(shortcut("Inspector", "ctrl-shift-i", p)),
                     )
                     .child(caption(
                         "Every binding above is registered in this build — press one to \
@@ -469,11 +508,29 @@ impl Workspace {
                                     .justify_between()
                                     .items_center()
                                     .child(div().text_sm().child("Slider value"))
-                                    .child(div().text_sm().font_semibold().child(
-                                        SharedString::from(format!("{}%", percent.round() as i32)),
-                                    )),
+                                    .child(
+                                        div()
+                                            .id("library-slider-value")
+                                            .test_support()
+                                            .aria_label(SharedString::from(format!(
+                                                "{} percent",
+                                                percent.round() as i32
+                                            )))
+                                            .text_sm()
+                                            .font_semibold()
+                                            .child(SharedString::from(format!(
+                                                "{}%",
+                                                percent.round() as i32
+                                            ))),
+                                    ),
                             )
-                            .child(Slider::new(&self.progress).horizontal())
+                            .child(
+                                div()
+                                    .id("library-slider")
+                                    .test_support()
+                                    .aria_label("Progress slider")
+                                    .child(Slider::new(&self.progress).horizontal()),
+                            )
                             .child(Progress::new("gallery-progress").value(percent)),
                     )
                     .child(divider(p))
@@ -568,7 +625,7 @@ impl Workspace {
     }
 
     /// Real busy flow for the loading demo: one in-flight task, then a count.
-    fn start_save_simulation(&mut self, cx: &mut gpui_kit::Context<Self>) {
+    pub(crate) fn start_save_simulation(&mut self, cx: &mut gpui_kit::Context<Self>) {
         use std::time::Duration;
 
         if self.gallery_busy {

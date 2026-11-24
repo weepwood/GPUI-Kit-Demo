@@ -1,6 +1,9 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
-use std::{fs, io, path::PathBuf};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 pub const MAX_TASKS: usize = 200;
 pub const MAX_TASK_CHARS: usize = 240;
@@ -92,8 +95,21 @@ pub fn settings_path() -> io::Result<PathBuf> {
     Ok(dirs.config_dir().join("settings.json"))
 }
 
+/// Size of the settings file in bytes, or `None` before the first save. Used by
+/// the Developer page.
+pub fn settings_size() -> Option<u64> {
+    let path = settings_path().ok()?;
+    fs::metadata(path).ok().map(|meta| meta.len())
+}
+
+/// Restore from the platform config directory.
 pub fn load() -> io::Result<Settings> {
-    let path = settings_path()?;
+    load_from(&settings_path()?)
+}
+
+/// Restore from an explicit file. Tests point this at a temporary directory so
+/// they never touch the real user profile.
+pub fn load_from(path: &Path) -> io::Result<Settings> {
     match fs::read(path) {
         Ok(bytes) => {
             let mut settings: Settings = serde_json::from_slice(&bytes)
@@ -106,13 +122,23 @@ pub fn load() -> io::Result<Settings> {
     }
 }
 
+/// Persist to the platform config directory.
 pub fn save(settings: &Settings) -> io::Result<()> {
-    let path = settings_path()?;
+    save_to(&settings_path()?, settings)
+}
+
+/// Persist to an explicit file, creating parent directories as needed.
+pub fn save_to(path: &Path, settings: &Settings) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
     let content = serde_json::to_vec_pretty(settings).map_err(io::Error::other)?;
     fs::write(path, content)
+}
+
+/// Pretty-printed settings, for the Developer page's JSON preview.
+pub fn to_pretty_json(settings: &Settings) -> String {
+    serde_json::to_string_pretty(settings).unwrap_or_else(|err| format!("Unavailable: {err}"))
 }
 
 #[cfg(test)]

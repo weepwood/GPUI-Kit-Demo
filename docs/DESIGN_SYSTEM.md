@@ -46,6 +46,14 @@ Library 页面是组件画廊，按 01–06 编号展示：Actions（按钮变�
 - 主题：GPUI Kit 主题与应用自定义 Token 应同时更新。
 - 动效（第 6 条的落地实现）：`with_animation` 的元素状态按元素 id 存续，因此折叠动画的 id 携带目标态（`sidebar-width-{collapsed}`）、计数动画的 id 携带数值，使状态翻转/变更时动画必然重播；页面按 page index 命名，页面隐藏时状态被丢弃，重新进入时重播入场。
 
+## 可测试性契约
+
+- 每个可点击元素：稳定 `.id(...)`；自绘 `div` 还要 `.test_support()` + `.aria_label(...)`。
+- id 前缀：`nav-` 导航、`task-` 任务、`*-switch` 偏好、`library-`/`gallery-` 画廊、`dev-` Developer、`page-title`/`page-eyebrow`/`status-bar` 全局结构。
+- 语义优先：用 `role` / `aria_selected` / `aria_label` 表达状态，测试只读原生语义，不读像素。
+- 列表元素 id 用存储索引而非渲染序号，避免视觉顺序变化导致断言漂移。
+- 动效必须可关闭；关闭后一帧即为终态，几何断言依赖这个前提。
+
 ## 面向 UI 生成 Agent 的约束
 
 > 为已有 Rust GPUI Kit 应用优化一个工作台页面。先读取组件和 `Palette`，遵循现有 Theme / Context / Render API。不得凭空新增 API。不要用通用 SaaS dashboard 的巨型标题、三列统计卡、荧光渐变、装饰标签和聊天框。以具体用户任务为导向，优先修正内容层级、文字、行距与状态反馈。每个按钮需有实际操作，每个计数需来自状态。交付时列出影响到的 UI 状态、深浅模式、响应式窗口、跨平台构建风险和测试结果。

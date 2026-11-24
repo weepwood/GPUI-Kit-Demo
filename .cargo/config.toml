@@ -1,0 +1,8 @@
+# Short aliases for the commands this project actually runs. `cargo t` is the
+# full suite: the UI tests need gpui-kit's `test-support` feature, which turns
+# the library's `.test_support()` calls into the real element registry.
+[alias]
+t = "test --features gpui-kit/test-support"
+t-ui = "test --features gpui-kit/test-support --tests"
+check-all = "clippy --all-targets --features gpui-kit/test-support -- -D warnings"
+fmt-check = "fmt --all -- --check"

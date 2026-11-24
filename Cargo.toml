@@ -1,6 +1,6 @@
 [package]
 name = "gpui-kit-demo"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 description = "Reusable native desktop UI starter built with GPUI Kit"
 license = "MIT"
@@ -20,3 +20,11 @@ gpui-fast = ["gpui-kit/gpui-fast"]
 strip = "symbols"
 lto = "thin"
 codegen-units = 1
+
+# `gpui`'s `test-support` feature pulls in `proptest 1.12.0`, which requires
+# `rand_xorshift ^0.5` — a version that is not on crates.io yet, so the graph
+# cannot resolve without help. `vendor/rand-xorshift` fills that gap for
+# `rand_core` 0.10 and is only reachable from test builds. Remove both this
+# patch and the vendored crate once `rand_xorshift 0.5` is published.
+[patch.crates-io]
+rand_xorshift = { path = "vendor/rand-xorshift" }
