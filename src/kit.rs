@@ -16,7 +16,10 @@
 use crate::palette::Palette;
 use gpui_kit::base::StyledExt as _;
 use gpui_kit::component::{Icon, IconName, h_flex, v_flex};
-use gpui_kit::{Div, IntoElement, ParentElement, SharedString, Styled, div, px, rgb};
+use gpui_kit::{
+    Div, InteractiveElement, IntoElement, ParentElement, SharedString, Stateful, Styled, div, px,
+    rgb,
+};
 
 /// Outer container that hosts real content: Surface fill, hairline border,
 /// medium radius. The fill stays slightly translucent so the frosted window
@@ -111,18 +114,25 @@ pub fn rgba(hex: u32, alpha: f32) -> gpui_kit::Hsla {
 }
 
 /// A settings entry: soft icon tile on the left, label + description, control
-/// on the right. The control is provided by the caller.
+/// on the right, with a quiet hover sweep for affordance.
 pub fn setting_row(
+    id: &'static str,
     icon: IconName,
     title: &'static str,
     desc: &'static str,
     p: Palette,
     control: impl IntoElement,
-) -> Div {
-    h_flex()
+) -> Stateful<Div> {
+    div()
+        .id(id)
         .w_full()
         .gap_4()
         .items_center()
+        .px_2()
+        .py_1()
+        .rounded_lg()
+        .cursor_default()
+        .hover(move |style| style.bg(rgb(p.hover)))
         .child(
             div()
                 .flex_shrink_0()

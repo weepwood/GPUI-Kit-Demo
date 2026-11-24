@@ -10,6 +10,7 @@ use gpui_kit::component::slider::{SliderEvent, SliderState};
 use gpui_kit::component::{
     Icon, IconName, Sizable, Theme, ThemeMode,
     button::*,
+    checkbox::Checkbox,
     h_flex,
     input::{Input, InputState},
     switch::Switch,
@@ -17,7 +18,7 @@ use gpui_kit::component::{
 };
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
-use kit::{card, divider, pill, setting_row};
+use kit::{card, divider, setting_row};
 use palette::Palette;
 use std::time::Duration;
 use storage::MAX_TASKS;
@@ -84,7 +85,7 @@ struct Workspace {
     animations: bool,
     translucent: bool,
     clicks: usize,
-    tasks: Vec<String>,
+    tasks: Vec<storage::TaskEntry>,
     input: Entity<InputState>,
     playground_input: Entity<InputState>,
     save_error: Option<String>,
@@ -250,7 +251,14 @@ impl Workspace {
                         p.muted
                     }))),
             )
-            .when(!self.collapsed, |el| el.child(div().text_sm().child(label)))
+            .when(!self.collapsed, |el| {
+                el.child(
+                    div()
+                        .text_sm()
+                        .when(active, |label| label.font_medium())
+                        .child(label),
+                )
+            })
             .hover(move |s| s.bg(rgb(p.hover)))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.page = page;
@@ -478,7 +486,19 @@ impl Workspace {
                 h_flex()
                     .items_center()
                     .gap_3()
-                    .child(pill("LOCAL ONLY", p))
+                    .child(
+                        h_flex()
+                            .items_center()
+                            .gap_2()
+                            .px_2()
+                            .h(px(22.))
+                            .rounded_full()
+                            .border_1()
+                            .border_color(rgb(p.border))
+                            .bg(rgb(p.surface))
+                            .child(div().size_1().rounded_full().bg(rgb(p.status_text)))
+                            .child(div().text_xs().text_color(rgb(p.muted)).child("LOCAL ONLY")),
+                    )
                     .child(
                         Button::new("theme-button")
                             .ghost()
@@ -512,7 +532,7 @@ impl Workspace {
             )
             .child(
                 div()
-                    .text_3xl()
+                    .text_2xl()
                     .font_semibold()
                     .child(self.page.title_leadin()),
             )
@@ -578,6 +598,12 @@ impl Workspace {
     fn overview(&self, p: Palette, cx: &mut Context<Self>) -> Div {
         let capacity = (self.tasks.len() as f32 / MAX_TASKS as f32) * 100.;
         let task_count = self.tasks.len();
+        let done_count = self.tasks.iter().filter(|task| task.done).count();
+        let done_pct = if task_count == 0 {
+            0.
+        } else {
+            done_count as f32 / task_count as f32 * 100.
+        };
         let count_up: AnyElement = if self.animations {
             div()
                 .text_3xl()
@@ -601,80 +627,175 @@ impl Workspace {
                 .child(SharedString::from(format!("{task_count}")))
                 .into_any_element()
         };
-        v_flex().gap_6()
+        v_flex()
+            .gap_5()
             .child(self.page_hero(p))
             .child(
-                h_flex().gap_5().items_stretch()
+                h_flex()
+                    .gap_5()
+                    .items_stretch()
                     .child(
-                        card(p).p_6().flex_1().flex().flex_col().gap_4()
+                        card(p)
+                            .p_5()
+                            .w(px(600.))
+                            .flex_shrink_0()
+                            .flex()
+                            .flex_col()
+                            .gap_4()
                             .child(
-                                h_flex().gap_3().items_center()
+                                h_flex()
+                                    .gap_3()
+                                    .items_center()
                                     .child(
-                                        div().text_xs().font_semibold().text_color(rgb(p.subtle))
+                                        div()
+                                            .text_xs()
+                                            .font_semibold()
+                                            .text_color(rgb(p.subtle))
                                             .child("YOUR TASKS"),
                                     )
                                     .child(div().flex_1())
-                                    .child(
-                                        div().text_xs().text_color(rgb(p.muted))
-                                            .child("Stored on this device"),
-                                    ),
+                                    .child(div().text_xs().text_color(rgb(p.muted)).child(
+                                        SharedString::from(format!(
+                                            "{done_count} done · {} / {MAX_TASKS} stored",
+                                            self.tasks.len()
+                                        )),
+                                    )),
                             )
                             .child(
-                                h_flex().gap_6().items_end()
+                                h_flex()
+                                    .gap_4()
+                                    .items_center()
                                     .child(count_up)
                                     .child(
-                                        v_flex().gap_1().pb_2()
-                                            .child(div().text_sm().text_color(rgb(p.muted))
-                                                .child(if self.tasks.len() == 1 { "Task in your list" } else { "Tasks in your list" }))
+                                        v_flex()
+                                            .gap_1()
+                                            .min_w_0()
+                                            .child(div().text_sm().text_color(rgb(p.muted)).child(
+                                                SharedString::from(format!(
+                                                    "{} of {} done",
+                                                    done_count, task_count
+                                                )),
+                                            ))
                                             .child(
-                                                div().text_xs().text_color(rgb(p.subtle))
-                                                    .child(SharedString::from(format!(
-                                                        "{} / {} stored",
-                                                        self.tasks.len(), MAX_TASKS
-                                                    ))),
+                                                gpui_kit::component::progress::Progress::new(
+                                                    "overview-progress",
+                                                )
+                                                .value(done_pct)
+                                                .w(px(180.)),
                                             ),
                                     )
                                     .child(div().flex_1())
                                     .child(
-                                        gpui_kit::component::progress::ProgressCircle::new("overview-capacity")
-                                            .value(capacity),
+                                        gpui_kit::component::progress::ProgressCircle::new(
+                                            "overview-capacity",
+                                        )
+                                        .value(capacity),
                                     ),
                             )
-                            .child(h_flex().items_center()
-                                .child(
-                                    Button::new("overview-activity").primary().label("Open task list")
+                            .child(kit::divider(p))
+                            .when(self.tasks.is_empty(), |el| {
+                                el.child(
+                                    div()
+                                        .text_sm()
+                                        .text_color(rgb(p.muted))
+                                        .child("No tasks yet — create one from the Tasks page."),
+                                )
+                            })
+                            .children(self.tasks.iter().rev().take(3).map(|task| {
+                                h_flex()
+                                    .gap_3()
+                                    .items_center()
+                                    .min_w_0()
+                                    .child(if task.done {
+                                        Icon::new(IconName::CircleCheck)
+                                            .text_color(rgb(p.accent_ink))
+                                            .into_any_element()
+                                    } else {
+                                        div()
+                                            .size_2()
+                                            .flex_shrink_0()
+                                            .rounded_full()
+                                            .border_1()
+                                            .border_color(rgb(p.border))
+                                            .into_any_element()
+                                    })
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .min_w_0()
+                                            .truncate()
+                                            .text_color(rgb(if task.done {
+                                                p.subtle
+                                            } else {
+                                                p.text
+                                            }))
+                                            .when(task.done, |el| el.line_through())
+                                            .child(SharedString::from(task.title.clone())),
+                                    )
+                            }))
+                            .when(self.tasks.len() > 3, |el| {
+                                el.child(div().text_xs().text_color(rgb(p.subtle)).child(
+                                    SharedString::from(format!(
+                                        "{} more on the task list",
+                                        self.tasks.len() - 3
+                                    )),
+                                ))
+                            })
+                            .child(div().flex_1())
+                            .child(
+                                h_flex().items_center().child(
+                                    Button::new("overview-activity")
+                                        .primary()
+                                        .label("Open task list")
                                         .on_click(cx.listener(|this, _, _, cx| {
                                             this.page = Page::Activity;
                                             cx.notify();
                                         })),
-                                )),
+                                ),
+                            ),
                     )
                     .child(
-                        v_flex().flex_1().gap_5()
+                        v_flex()
+                            .flex_1()
+                            .min_w_0()
+                            .gap_2()
                             .child(
-                                v_flex().gap_2().min_w_0()
-                                    .child(div().text_sm().font_semibold().child("Explore the workspace"))
-                                    .child(self.destination_row("overview-components", "Design kit",
-                                        "Buttons, inputs, selection, indicators, feedback and color roles",
-                                        IconName::GalleryVerticalEnd, Page::Components, p, cx)),
+                                div()
+                                    .text_sm()
+                                    .font_semibold()
+                                    .child("Explore the workspace"),
                             )
-                            .child(
-                                v_flex().gap_2().min_w_0()
-                                    .child(div().text_sm().font_semibold().child("Adjust the app"))
-                                    .child(self.destination_row("overview-preferences", "Appearance & layout",
-                                        "Switch themes and adjust the navigation",
-                                        IconName::Settings, Page::Settings, p, cx)),
-                            ),
+                            .child(self.destination_row(
+                                "overview-components",
+                                "Design kit",
+                                "Buttons, inputs, selection, indicators, feedback and color roles",
+                                IconName::GalleryVerticalEnd,
+                                Page::Components,
+                                p,
+                                cx,
+                            ))
+                            .child(self.destination_row(
+                                "overview-preferences",
+                                "Appearance & layout",
+                                "Theme, motion, frosted glass and navigation",
+                                IconName::Settings,
+                                Page::Settings,
+                                p,
+                                cx,
+                            )),
                     ),
             )
             .child(
-                div().text_xs().text_color(rgb(p.subtle))
+                div()
+                    .text_xs()
+                    .text_color(rgb(p.subtle))
                     .child("A native desktop reference project. Everything runs locally."),
             )
     }
 
     fn activity(&self, p: Palette, cx: &mut Context<Self>) -> Div {
         let row_pad = if self.density == 1 { px(8.) } else { px(14.) };
+        let done_count = self.tasks.iter().filter(|task| task.done).count();
         v_flex()
             .gap_5()
             .child(self.page_hero(p))
@@ -688,8 +809,9 @@ impl Workspace {
                             .text_sm()
                             .font_semibold()
                             .child(SharedString::from(format!(
-                                "Saved tasks · {}",
-                                self.tasks.len()
+                                "Saved tasks · {} ({} done)",
+                                self.tasks.len(),
+                                done_count
                             ))),
                     )
                     .child(div().flex_1())
@@ -733,8 +855,9 @@ impl Workspace {
                                 ),
                         )
                     })
-                    .children(self.tasks.iter().rev().enumerate().map(|(i, title)| {
+                    .children(self.tasks.iter().rev().enumerate().map(|(i, task)| {
                         let index = self.tasks.len() - 1 - i;
+                        let done = task.done;
                         h_flex()
                             .gap_3()
                             .px_5()
@@ -744,27 +867,27 @@ impl Workspace {
                                 el.border_t_1().border_color(rgb(p.border))
                             })
                             .child(
-                                h_flex()
-                                    .flex_shrink_0()
-                                    .size_7()
-                                    .rounded_md()
-                                    .bg(rgb(p.canvas))
-                                    .text_color(rgb(p.subtle))
-                                    .text_xs()
-                                    .font_medium()
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .child(SharedString::from(format!("{}", index + 1))),
+                                Checkbox::new(SharedString::from(format!("task-done-{index}")))
+                                    .checked(done)
+                                    .on_change(cx.listener(move |this, checked, _, cx| {
+                                        if let Some(entry) = this.tasks.get_mut(index) {
+                                            entry.done = *checked;
+                                            this.persist();
+                                            cx.notify();
+                                        }
+                                    })),
                             )
                             .child(
-                                v_flex().flex_1().gap_1().min_w_0().child(
-                                    div()
-                                        .text_sm()
-                                        .font_medium()
-                                        .child(SharedString::from(title.clone())),
-                                ),
+                                div()
+                                    .text_sm()
+                                    .font_medium()
+                                    .min_w_0()
+                                    .truncate()
+                                    .text_color(rgb(if done { p.subtle } else { p.text }))
+                                    .when(done, |el| el.line_through())
+                                    .child(SharedString::from(task.title.clone())),
                             )
+                            .child(div().flex_1())
                             .child(
                                 Button::new(SharedString::from(format!("remove-task-{index}")))
                                     .ghost()
@@ -788,16 +911,17 @@ impl Workspace {
             .map(|path| path.display().to_string())
             .unwrap_or_else(|_| "Unavailable on this system".to_string());
         v_flex()
-            .gap_6()
+            .gap_5()
             .child(self.page_hero(p))
             .child(
                 card(p)
-                    .p_6()
+                    .p_5()
                     .flex()
                     .flex_col()
-                    .gap_5()
+                    .gap_4()
                     .child(div().text_sm().font_semibold().child("Settings"))
                     .child(setting_row(
+                        "row-appearance",
                         IconName::Moon,
                         "Dark appearance",
                         "Switch the workbench between light and dark palettes.",
@@ -810,6 +934,7 @@ impl Workspace {
                     ))
                     .child(divider(p))
                     .child(setting_row(
+                        "row-navigation",
                         IconName::PanelLeft,
                         "Collapsed sidebar",
                         "Keep the navigation rail collapsed to icons only.",
@@ -822,6 +947,7 @@ impl Workspace {
                     ))
                     .child(divider(p))
                     .child(setting_row(
+                        "row-motion",
                         IconName::Play,
                         "Interface motion",
                         "Animate the sidebar, page changes and counters.",
@@ -836,6 +962,7 @@ impl Workspace {
                     ))
                     .child(divider(p))
                     .child(setting_row(
+                        "row-frosted",
                         IconName::Eye,
                         "Frosted background",
                         "Let the native acrylic / vibrancy blur show through the workbench.",
@@ -849,10 +976,10 @@ impl Workspace {
             )
             .child(
                 card(p)
-                    .p_6()
+                    .p_5()
                     .flex()
                     .flex_col()
-                    .gap_4()
+                    .gap_3()
                     .child(div().text_sm().font_semibold().child("Storage"))
                     .child(
                         h_flex()
@@ -907,7 +1034,7 @@ impl Workspace {
                                         .chars()
                                         .take(storage::MAX_TASK_CHARS)
                                         .collect::<String>();
-                                    this.tasks.push(title);
+                                    this.tasks.push(storage::TaskEntry::new(title));
                                     this.input
                                         .update(cx, |input, cx| input.set_value("", window, cx));
                                     this.persist();

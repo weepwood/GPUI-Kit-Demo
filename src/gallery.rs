@@ -42,7 +42,7 @@ impl Workspace {
                             .text_color(rgb(p.accent_ink))
                             .child("COMPONENT LIBRARY"),
                     )
-                    .child(div().text_3xl().font_semibold().child("Design kit"))
+                    .child(div().text_2xl().font_semibold().child("Design kit"))
                     .child(
                         div()
                             .text_sm()

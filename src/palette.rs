@@ -45,9 +45,9 @@ impl Palette {
                 status_text: 0xa0cfac,
                 accent_soft: 0x45362c,
                 accent_ink: 0xf0b992,
-                alpha_canvas: 0.94,
-                alpha_sidebar: 0.80,
-                alpha_surface: 0.86,
+                alpha_canvas: 0.90,
+                alpha_sidebar: 0.77,
+                alpha_surface: 0.82,
             }
         } else {
             Self {
@@ -67,9 +67,9 @@ impl Palette {
                 status_text: 0x376547,
                 accent_soft: 0xf6e9df,
                 accent_ink: 0x885035,
-                alpha_canvas: 0.96,
-                alpha_sidebar: 0.84,
-                alpha_surface: 0.90,
+                alpha_canvas: 0.92,
+                alpha_sidebar: 0.80,
+                alpha_surface: 0.86,
             }
         }
     }

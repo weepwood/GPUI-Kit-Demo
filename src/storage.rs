@@ -5,6 +5,21 @@ use std::{fs, io, path::PathBuf};
 pub const MAX_TASKS: usize = 200;
 pub const MAX_TASK_CHARS: usize = 240;
 
+/// A stored task. Older files kept plain strings; those migrate to entries
+/// with `done: false` on load (see [`deserialize_tasks`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskEntry {
+    pub title: String,
+    #[serde(default)]
+    pub done: bool,
+}
+
+impl TaskEntry {
+    pub fn new(title: String) -> Self {
+        Self { title, done: false }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -12,7 +27,8 @@ pub struct Settings {
     pub collapsed: bool,
     pub animations: bool,
     pub translucent: bool,
-    pub tasks: Vec<String>,
+    #[serde(deserialize_with = "deserialize_tasks")]
+    pub tasks: Vec<TaskEntry>,
 }
 
 impl Default for Settings {
@@ -27,13 +43,44 @@ impl Default for Settings {
     }
 }
 
+/// Accepts both the current `[{ "title": .., "done": .. }]` format and the
+/// legacy `[".."]` format so no user task is ever dropped by an upgrade.
+fn deserialize_tasks<'de, D>(deserializer: D) -> Result<Vec<TaskEntry>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum TaskValue {
+        Entry {
+            title: String,
+            #[serde(default)]
+            done: bool,
+        },
+        Title(String),
+    }
+
+    Vec::<TaskValue>::deserialize(deserializer).map(|values| {
+        values
+            .into_iter()
+            .map(|value| match value {
+                TaskValue::Entry { title, done } => TaskEntry { title, done },
+                TaskValue::Title(title) => TaskEntry { title, done: false },
+            })
+            .collect()
+    })
+}
+
 impl Settings {
     fn normalize(&mut self) {
         self.tasks = self
             .tasks
             .drain(..)
-            .map(|task| task.trim().chars().take(MAX_TASK_CHARS).collect::<String>())
-            .filter(|task| !task.is_empty())
+            .map(|mut task| {
+                task.title = task.title.trim().chars().take(MAX_TASK_CHARS).collect();
+                task
+            })
+            .filter(|task| !task.title.is_empty())
             .take(MAX_TASKS)
             .collect();
     }
@@ -88,13 +135,31 @@ mod tests {
     }
 
     #[test]
-    fn serialize_and_restore() {
+    fn legacy_string_tasks_migrate_to_entries() {
+        let parsed: Settings =
+            serde_json::from_str(r#"{"tasks":["Write release notes","Old todos"]}"#).unwrap();
+        assert_eq!(parsed.tasks.len(), 2);
+        assert_eq!(
+            parsed.tasks[0],
+            TaskEntry::new("Write release notes".into())
+        );
+        assert!(!parsed.tasks[1].done);
+    }
+
+    #[test]
+    fn entries_round_trip_with_done_state() {
         let settings = Settings {
             dark: true,
             collapsed: true,
             animations: false,
             translucent: false,
-            tasks: vec!["One".to_string()],
+            tasks: vec![
+                TaskEntry::new("One".into()),
+                TaskEntry {
+                    title: "Two".into(),
+                    done: true,
+                },
+            ],
         };
         let data = serde_json::to_string(&settings).unwrap();
         assert_eq!(serde_json::from_str::<Settings>(&data).unwrap(), settings);
@@ -107,11 +172,15 @@ mod tests {
             collapsed: false,
             animations: true,
             translucent: true,
-            tasks: vec![" ".to_owned(), "  hello  ".to_owned(), "x".repeat(300)],
+            tasks: vec![
+                TaskEntry::new(" ".into()),
+                TaskEntry::new("  hello  ".into()),
+                TaskEntry::new("x".repeat(300)),
+            ],
         };
         settings.normalize();
-        assert_eq!(settings.tasks[0], "hello");
-        assert_eq!(settings.tasks[1].chars().count(), MAX_TASK_CHARS);
+        assert_eq!(settings.tasks[0].title, "hello");
+        assert_eq!(settings.tasks[1].title.chars().count(), MAX_TASK_CHARS);
         assert_eq!(settings.tasks.len(), 2);
     }
 
