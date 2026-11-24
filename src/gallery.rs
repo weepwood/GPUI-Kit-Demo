@@ -369,6 +369,49 @@ impl Workspace {
                         "Key chips present the binding style only — this demo does not \
                              register those shortcuts.",
                         p,
+                    ))
+                    .child(divider(p))
+                    .child(field_label("BUNDLED ICONS", p))
+                    .child(
+                        h_flex().flex_wrap().gap_2().children(
+                            [
+                                (IconName::Search, "Search"),
+                                (IconName::Star, "Star"),
+                                (IconName::Heart, "Heart"),
+                                (IconName::Bell, "Bell"),
+                                (IconName::Palette, "Palette"),
+                                (IconName::Globe, "Globe"),
+                                (IconName::Github, "Github"),
+                                (IconName::FileText, "File"),
+                                (IconName::HardDrive, "Disk"),
+                                (IconName::Cpu, "Cpu"),
+                                (IconName::Mic, "Mic"),
+                                (IconName::Copy, "Copy"),
+                                (IconName::Play, "Play"),
+                                (IconName::Pause, "Pause"),
+                                (IconName::RefreshCw, "Refresh"),
+                                (IconName::ExternalLink, "Link"),
+                                (IconName::User, "User"),
+                                (IconName::Info, "Info"),
+                            ]
+                            .map(|(icon, name)| {
+                                v_flex()
+                                    .w(px(64.))
+                                    .gap_2()
+                                    .items_center()
+                                    .py_2()
+                                    .rounded_md()
+                                    .bg(rgb(p.surface))
+                                    .border_1()
+                                    .border_color(rgb(p.border))
+                                    .child(Icon::new(icon).text_color(rgb(p.accent_ink)))
+                                    .child(div().text_xs().text_color(rgb(p.muted)).child(name))
+                            }),
+                        ),
+                    )
+                    .child(caption(
+                        "A sample of the Lucide set bundled with GPUI Kit assets.",
+                        p,
                     )),
             )
     }

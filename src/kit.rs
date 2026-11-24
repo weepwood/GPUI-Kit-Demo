@@ -19,10 +19,12 @@ use gpui_kit::component::{Icon, IconName, h_flex, v_flex};
 use gpui_kit::{Div, IntoElement, ParentElement, SharedString, Styled, div, px, rgb};
 
 /// Outer container that hosts real content: Surface fill, hairline border,
-/// medium radius. No stacked shadows or glow.
+/// medium radius. The fill stays slightly translucent so the frosted window
+/// backdrop extends beneath the whole stack; content remains readable because
+/// the canvas and surface layers composite to near-opaque.
 pub fn card(p: Palette) -> Div {
     div()
-        .bg(rgb(p.surface))
+        .bg(rgba(p.surface, p.alpha_surface))
         .border_1()
         .border_color(rgb(p.border))
         .rounded_xl()
@@ -99,6 +101,13 @@ pub fn pill(text: &'static str, p: Palette) -> Div {
 /// Full-width 1px separator.
 pub fn divider(p: Palette) -> Div {
     div().w_full().h(px(1.)).bg(rgb(p.border)).flex_shrink_0()
+}
+
+/// Semantic color with alpha, used by the frosted-window surfaces. Alpha 1
+/// renders the same role fully opaque.
+pub fn rgba(hex: u32, alpha: f32) -> gpui_kit::Hsla {
+    let color: gpui_kit::Hsla = rgb(hex).into();
+    color.opacity(alpha)
 }
 
 /// A settings entry: soft icon tile on the left, label + description, control

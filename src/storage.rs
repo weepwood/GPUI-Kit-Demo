@@ -10,6 +10,8 @@ pub const MAX_TASK_CHARS: usize = 240;
 pub struct Settings {
     pub dark: bool,
     pub collapsed: bool,
+    pub animations: bool,
+    pub translucent: bool,
     pub tasks: Vec<String>,
 }
 
@@ -18,6 +20,8 @@ impl Default for Settings {
         Self {
             dark: false,
             collapsed: false,
+            animations: true,
+            translucent: true,
             tasks: Vec::new(),
         }
     }
@@ -88,6 +92,8 @@ mod tests {
         let settings = Settings {
             dark: true,
             collapsed: true,
+            animations: false,
+            translucent: false,
             tasks: vec!["One".to_string()],
         };
         let data = serde_json::to_string(&settings).unwrap();
@@ -99,6 +105,8 @@ mod tests {
         let mut settings = Settings {
             dark: false,
             collapsed: false,
+            animations: true,
+            translucent: true,
             tasks: vec![" ".to_owned(), "  hello  ".to_owned(), "x".repeat(300)],
         };
         settings.normalize();

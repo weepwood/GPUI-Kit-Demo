@@ -18,6 +18,11 @@ pub struct Palette {
     pub status_text: u32,
     pub accent_soft: u32,
     pub accent_ink: u32,
+    /// Opacity of the roles when the frosted window background is enabled.
+    /// Content layers stack over the canvas, so text areas stay nearly opaque.
+    pub alpha_canvas: f32,
+    pub alpha_sidebar: f32,
+    pub alpha_surface: f32,
 }
 
 impl Palette {
@@ -40,6 +45,9 @@ impl Palette {
                 status_text: 0xa0cfac,
                 accent_soft: 0x45362c,
                 accent_ink: 0xf0b992,
+                alpha_canvas: 0.94,
+                alpha_sidebar: 0.80,
+                alpha_surface: 0.86,
             }
         } else {
             Self {
@@ -59,6 +67,9 @@ impl Palette {
                 status_text: 0x376547,
                 accent_soft: 0xf6e9df,
                 accent_ink: 0x885035,
+                alpha_canvas: 0.96,
+                alpha_sidebar: 0.84,
+                alpha_surface: 0.90,
             }
         }
     }

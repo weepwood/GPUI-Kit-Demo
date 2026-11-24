@@ -19,6 +19,7 @@ use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 use kit::{card, divider, pill, setting_row};
 use palette::Palette;
+use std::time::Duration;
 use storage::MAX_TASKS;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -48,6 +49,15 @@ impl Page {
         }
     }
 
+    fn index(self) -> u8 {
+        match self {
+            Self::Overview => 0,
+            Self::Components => 1,
+            Self::Activity => 2,
+            Self::Settings => 3,
+        }
+    }
+
     fn eyebrow(self) -> &'static str {
         match self {
             Self::Overview => "WORKBENCH / OVERVIEW",
@@ -71,6 +81,8 @@ struct Workspace {
     page: Page,
     dark: bool,
     collapsed: bool,
+    animations: bool,
+    translucent: bool,
     clicks: usize,
     tasks: Vec<String>,
     input: Entity<InputState>,
@@ -116,6 +128,8 @@ impl Workspace {
             page: Page::Overview,
             dark: settings.dark,
             collapsed: settings.collapsed,
+            animations: settings.animations,
+            translucent: settings.translucent,
             clicks: 0,
             tasks: settings.tasks,
             input,
@@ -134,6 +148,8 @@ impl Workspace {
         let settings = storage::Settings {
             dark: self.dark,
             collapsed: self.collapsed,
+            animations: self.animations,
+            translucent: self.translucent,
             tasks: self.tasks.clone(),
         };
         self.save_error = storage::save(&settings).err().map(|err| err.to_string());
@@ -161,6 +177,38 @@ impl Workspace {
         cx.notify();
     }
 
+    /// Switch the native window between the frosted (acrylic) backdrop and an
+    /// opaque one; the palette follows instantly because every layer reads
+    /// this flag per frame.
+    fn set_translucent(&mut self, translucent: bool, window: &mut Window, cx: &mut Context<Self>) {
+        self.translucent = translucent;
+        window.set_background_appearance(if translucent {
+            WindowBackgroundAppearance::Blurred
+        } else {
+            WindowBackgroundAppearance::Opaque
+        });
+        self.persist();
+        cx.notify();
+    }
+
+    /// Wrap a freshly mounted page in a short fade-and-rise entrance. The
+    /// element state for a page id is dropped while that page is hidden, so
+    /// every navigation replays the motion.
+    fn enter_page<E>(&self, page: Page, el: E) -> AnyElement
+    where
+        E: gpui_kit::Styled + IntoElement + 'static,
+    {
+        if !self.animations {
+            return el.into_any_element();
+        }
+        el.with_animation(
+            SharedString::from(format!("page-enter-{}", page.index())),
+            Animation::new(Duration::from_millis(180)).with_easing(ease_out_quint()),
+            move |el, delta| el.opacity(0.55 + 0.45 * delta).mt(px(10. * (1. - delta))),
+        )
+        .into_any_element()
+    }
+
     fn menu_item(
         &self,
         id: &'static str,
@@ -171,22 +219,25 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let active = self.page == page;
+        let collapsed = self.collapsed;
         h_flex()
             .id(id)
             .w_full()
             .h(px(36.))
-            .gap_3()
-            .px_2()
             .items_center()
             .cursor_pointer()
             .rounded_lg()
             .bg(rgb(if active { p.selected } else { p.sidebar }))
             .text_color(rgb(if active { p.text } else { p.muted }))
-            .child(div().w(px(3.)).h(px(16.)).rounded_full().bg(if active {
-                rgb(p.accent_ink)
-            } else {
-                rgb(p.sidebar)
-            }))
+            .when(!collapsed, |el| el.gap_3().px_2())
+            .when(collapsed, |el| el.justify_center())
+            .when(!collapsed, |el| {
+                el.child(div().w(px(3.)).h(px(16.)).rounded_full().bg(if active {
+                    rgb(p.accent_ink)
+                } else {
+                    rgb(p.sidebar)
+                }))
+            })
             .child(
                 div()
                     .w(px(20.))
@@ -200,7 +251,6 @@ impl Workspace {
                     }))),
             )
             .when(!self.collapsed, |el| el.child(div().text_sm().child(label)))
-            .when(self.collapsed, |el| el.flex().justify_center())
             .hover(move |s| s.bg(rgb(p.hover)))
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.page = page;
@@ -208,23 +258,30 @@ impl Workspace {
             }))
     }
 
-    fn sidebar(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex()
+    fn sidebar(&self, p: Palette, cx: &mut Context<Self>) -> AnyElement {
+        let collapsed = self.collapsed;
+        let base = v_flex()
             .h_full()
-            .w(px(if self.collapsed { 68. } else { 232. }))
+            .w(px(if collapsed { 64. } else { 232. }))
             .flex_shrink_0()
             .gap_2()
             .p_3()
-            .bg(rgb(p.sidebar))
+            .bg(kit::rgba(
+                p.sidebar,
+                if self.translucent {
+                    p.alpha_sidebar
+                } else {
+                    1.0
+                },
+            ))
             .border_r_1()
             .border_color(rgb(p.border))
             .child(
                 h_flex()
                     .h(px(56.))
                     .items_center()
-                    .gap_3()
-                    .when(!self.collapsed, |el| el.px_2())
-                    .when(self.collapsed, |el| el.pl_1())
+                    .when(!collapsed, |el| el.gap_3().px_2())
+                    .when(collapsed, |el| el.justify_center())
                     .child(
                         div()
                             .flex_shrink_0()
@@ -238,7 +295,7 @@ impl Workspace {
                             .font_semibold()
                             .child("G"),
                     )
-                    .when(!self.collapsed, |el| {
+                    .when(!collapsed, |el| {
                         el.child(
                             v_flex()
                                 .child(div().text_sm().font_semibold().child("Workbench"))
@@ -252,7 +309,7 @@ impl Workspace {
                     }),
             )
             .child(div().h(px(6.)))
-            .when(!self.collapsed, |el| {
+            .when(!collapsed, |el| {
                 el.child(
                     div()
                         .px_3()
@@ -312,8 +369,8 @@ impl Workspace {
                     .id("sidebar-toggle")
                     .h(px(38.))
                     .gap_2()
-                    .when(!self.collapsed, |el| el.px_3())
-                    .when(self.collapsed, |el| el.pl_6())
+                    .when(!collapsed, |el| el.px_3())
+                    .when(collapsed, |el| el.justify_center())
                     .items_center()
                     .rounded_lg()
                     .cursor_pointer()
@@ -327,7 +384,7 @@ impl Workspace {
                     } else {
                         IconName::PanelLeftClose
                     }))
-                    .when(!self.collapsed, |el| {
+                    .when(!collapsed, |el| {
                         el.child(div().text_sm().child("Collapse sidebar"))
                     }),
             )
@@ -335,10 +392,10 @@ impl Workspace {
             .child(
                 h_flex()
                     .h(px(48.))
-                    .px_1()
                     .gap_3()
                     .items_center()
-                    .when(self.collapsed, |el| el.justify_center())
+                    .when(!collapsed, |el| el.px_1())
+                    .when(collapsed, |el| el.justify_center())
                     .child(
                         div()
                             .size_8()
@@ -352,7 +409,7 @@ impl Workspace {
                             .font_semibold()
                             .child("W"),
                     )
-                    .when(!self.collapsed, |el| {
+                    .when(!collapsed, |el| {
                         el.child(
                             v_flex()
                                 .child(div().text_sm().font_medium().child("On this device"))
@@ -364,7 +421,22 @@ impl Workspace {
                                 ),
                         )
                     }),
-            )
+            );
+
+        if !self.animations {
+            return base.into_any_element();
+        }
+
+        // The animation id carries the target state, so every collapse or
+        // expand restarts the transition from the current width.
+        let from = px(if collapsed { 232. } else { 64. });
+        let to = px(if collapsed { 64. } else { 232. });
+        base.with_animation(
+            SharedString::from(format!("sidebar-width-{collapsed}")),
+            Animation::new(Duration::from_millis(200)).with_easing(ease_in_out),
+            move |el, delta| el.w(from + (to - from) * delta),
+        )
+        .into_any_element()
     }
 
     fn header(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
@@ -503,8 +575,32 @@ impl Workspace {
             .child(Icon::new(IconName::ArrowRight).text_color(rgb(p.subtle)))
     }
 
-    fn overview(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
+    fn overview(&self, p: Palette, cx: &mut Context<Self>) -> Div {
         let capacity = (self.tasks.len() as f32 / MAX_TASKS as f32) * 100.;
+        let task_count = self.tasks.len();
+        let count_up: AnyElement = if self.animations {
+            div()
+                .text_3xl()
+                .font_semibold()
+                .with_animation(
+                    // Id changes with the value so every task change replays.
+                    SharedString::from(format!("task-count-{task_count}")),
+                    Animation::new(Duration::from_millis(400)).with_easing(ease_out_quint()),
+                    move |el, delta| {
+                        el.child(SharedString::from(format!(
+                            "{}",
+                            (task_count as f32 * delta).round() as usize
+                        )))
+                    },
+                )
+                .into_any_element()
+        } else {
+            div()
+                .text_3xl()
+                .font_semibold()
+                .child(SharedString::from(format!("{task_count}")))
+                .into_any_element()
+        };
         v_flex().gap_6()
             .child(self.page_hero(p))
             .child(
@@ -525,10 +621,7 @@ impl Workspace {
                             )
                             .child(
                                 h_flex().gap_6().items_end()
-                                    .child(
-                                        div().text_3xl().font_semibold()
-                                            .child(SharedString::from(format!("{}", self.tasks.len()))),
-                                    )
+                                    .child(count_up)
                                     .child(
                                         v_flex().gap_1().pb_2()
                                             .child(div().text_sm().text_color(rgb(p.muted))
@@ -580,7 +673,7 @@ impl Workspace {
             )
     }
 
-    fn activity(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
+    fn activity(&self, p: Palette, cx: &mut Context<Self>) -> Div {
         let row_pad = if self.density == 1 { px(8.) } else { px(14.) };
         v_flex()
             .gap_5()
@@ -690,7 +783,7 @@ impl Workspace {
             )
     }
 
-    fn settings(&self, p: Palette, cx: &mut Context<Self>) -> impl IntoElement {
+    fn settings(&self, p: Palette, cx: &mut Context<Self>) -> Div {
         let storage_path = storage::settings_path()
             .map(|path| path.display().to_string())
             .unwrap_or_else(|_| "Unavailable on this system".to_string());
@@ -725,6 +818,32 @@ impl Workspace {
                             .checked(self.collapsed)
                             .on_change(cx.listener(|this, checked, _, cx| {
                                 this.set_collapsed(*checked, cx);
+                            })),
+                    ))
+                    .child(divider(p))
+                    .child(setting_row(
+                        IconName::Play,
+                        "Interface motion",
+                        "Animate the sidebar, page changes and counters.",
+                        p,
+                        Switch::new("animations-switch")
+                            .checked(self.animations)
+                            .on_change(cx.listener(|this, checked, _, cx| {
+                                this.animations = *checked;
+                                this.persist();
+                                cx.notify();
+                            })),
+                    ))
+                    .child(divider(p))
+                    .child(setting_row(
+                        IconName::Eye,
+                        "Frosted background",
+                        "Let the native acrylic / vibrancy blur show through the workbench.",
+                        p,
+                        Switch::new("translucent-switch")
+                            .checked(self.translucent)
+                            .on_change(cx.listener(|this, checked, window, cx| {
+                                this.set_translucent(*checked, window, cx);
                             })),
                     )),
             )
@@ -873,9 +992,10 @@ impl Page {
 impl Render for Workspace {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let p = Palette::new(self.dark);
+        // The root paints nothing: the frosted window backdrop shows through
+        // the translucent sidebar and canvas layers instead.
         h_flex()
             .size_full()
-            .bg(rgb(p.canvas))
             .text_color(rgb(p.text))
             .child(self.sidebar(p, cx))
             .child(
@@ -883,6 +1003,14 @@ impl Render for Workspace {
                     .flex_1()
                     .h_full()
                     .min_w_0()
+                    .bg(kit::rgba(
+                        p.canvas,
+                        if self.translucent {
+                            p.alpha_canvas
+                        } else {
+                            1.0
+                        },
+                    ))
                     .child(self.header(p, cx))
                     .child(
                         v_flex()
@@ -893,10 +1021,18 @@ impl Render for Workspace {
                             .overflow_y_scrollbar()
                             .child(v_flex().w_full().max_w(px(1050.)).p_7().child(
                                 match self.page {
-                                    Page::Overview => self.overview(p, cx).into_any_element(),
-                                    Page::Components => self.library(p, cx).into_any_element(),
-                                    Page::Activity => self.activity(p, cx).into_any_element(),
-                                    Page::Settings => self.settings(p, cx).into_any_element(),
+                                    Page::Overview => {
+                                        self.enter_page(self.page, self.overview(p, cx))
+                                    }
+                                    Page::Components => {
+                                        self.enter_page(self.page, self.library(p, cx))
+                                    }
+                                    Page::Activity => {
+                                        self.enter_page(self.page, self.activity(p, cx))
+                                    }
+                                    Page::Settings => {
+                                        self.enter_page(self.page, self.settings(p, cx))
+                                    }
                                 },
                             )),
                     )
@@ -930,6 +1066,14 @@ fn main() {
         palette::apply_theme_overrides(cx);
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1220.), px(800.)), cx)),
+            // Native acrylic (Windows) / material (macOS) behind translucent
+            // areas. Toggled at runtime from Preferences via
+            // `Window::set_background_appearance`.
+            window_background: if settings.translucent {
+                WindowBackgroundAppearance::Blurred
+            } else {
+                WindowBackgroundAppearance::Opaque
+            },
             ..Default::default()
         };
         gpui_kit::open_window(options, cx, move |window, cx| {

@@ -11,11 +11,13 @@
 
 ## 界面组成
 
-- **Home**：本地任务数与高频入口，不使用虚构的增长指标。
-- **Library**：六节组件画廊（Actions / Entry / Selection / Indicators / Feedback / Color roles），全部示例绑定真实状态；预览输入与任务编辑相互独立。
+- **Home**：本地任务数与高频入口，不使用虚构的增长指标；计数带滚动动画。
+- **Library**：六节组件画廊（Actions / Entry / Selection / Indicators / Feedback / Color roles），全部示例绑定真实状态；含 18 个内嵌 Lucide 图标的展示网格。
 - **Tasks**：输入、创建、删除本地任务；此处是任务编辑的唯一入口，行距密度跟随 Library 中的演示设置。
-- **Preferences**：浅色 / 深色模式与导航折叠状态，重启后保留；显示真实配置文件路径。
+- **Preferences**：浅色 / 深色模式、导航折叠、界面动效与原生毛玻璃背景开关，重启后保留；显示真实配置文件路径。
 - **Status bar**：持续反馈本地保存状态，不占用内容区。
+
+窗口默认启用系统原生模糊背景（Windows 11 Acrylic / macOS Vibrancy），侧栏与画布以半透明层级透出；可以在 Preferences 中一键关闭并持久化。页面切换与侧栏折叠带有克制的过渡动画，同样可在 Preferences 中关闭。
 
 界面由 Rust + GPUI 原生渲染，无 Electron 或 WebView。任务、主题与侧栏偏好保存到系统配置目录的 JSON 文件中，不需要在线账号。
 

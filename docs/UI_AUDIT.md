@@ -1,4 +1,4 @@
-# UI review · 2026-11-24
+# UI review · 2026-11-24（第一轮：组件画廊）
 
 | 位置 | 实测代码发现 | 修改 |
 | --- | --- | --- |
@@ -16,6 +16,24 @@
 - `cargo fmt`、`cargo check`、`cargo clippy`（仅遗留 2 条历史告警：storage Default 可派生、destination_row 参数数，均在改动前已存在）、`cargo test` 7 项全部通过。
 - `cargo run` 启动冒烟：窗口正常打开、无 panic，9 秒后手动结束。
 - Windows 实机以外（macOS、多 DPI、reduced-motion、键盘可达性）的核对应由 CI 与实机完成，未通过前不得宣称发布。
+
+---
+
+# UI review · 2026-11-24（第二轮：折叠修正、动效、图标与原生毛玻璃）
+
+| 位置 | 实测代码发现 | 修改 |
+| --- | --- | --- |
+| 侧栏折叠态 | 指示条 + 图标组合整体居中导致图标偏移，左侧出现空白 | 折叠时隐藏指示条、菜单项/折叠按钮/头像一律 `justify_center`，logo 居中 |
+| 动效 | 界面完全无过渡，切页与折叠为硬切 | 侧栏折叠宽度过渡（200ms ease-in-out）、页面淡入上浮（180ms ease-out-quint）、Home 计数滚动（400ms）；动画 id 携带目标态以保证状态翻转时重播；新增 `animations` 偏好开关并持久化 |
+| 图标 | 画廊缺少对内嵌图标资源的展示 | Library 04 区块新增 18 个 Lucide 图标的网格（图标 + 名称） |
+| 毛玻璃 | 所有表面不透明，与"原生桌面"定位不符 | 窗口启用 `WindowBackgroundAppearance::Blurred`（Windows Acrylic / macOS Vibrancy），canvas / sidebar / surface 三层半透明；新增 `translucent` 偏好，运行时经 `Window::set_background_appearance` 即时切换 |
+| 兼容 | 旧 settings.json 缺少新字段 | `#[serde(default)]` 兜底，`animations` / `translucent` 默认开启；序列化往返测试更新 |
+
+## 验证范围
+
+- `cargo fmt` / `check` / `clippy`（仍仅 2 条历史告警）/ `test` 7 项全部通过；`cargo run` 实机冒烟正常。
+- Acrylic 依赖 Windows 10 1809+（build < 17763 自动跳过，退化为不透明）；macOS Vibrancy 以 CI 构建为准。
+- 折叠动画期间整树重排，若低端机出现卡顿可将 `animations` 关闭；多 DPI 与 reduced-motion 实机核对项保持待办。
 
 ---
 
