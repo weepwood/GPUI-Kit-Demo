@@ -1,3 +1,24 @@
+# UI review · 2026-11-24
+
+| 位置 | 实测代码发现 | 修改 |
+| --- | --- | --- |
+| Library | 仅 Button / Input / Switch 与三个色块，组件覆盖面与"组件库"定位不符 | 新增 `src/gallery.rs` 六节画廊：Actions、Entry、Selection、Indicators、Feedback、Color roles，全部绑定真实状态 |
+| Theme | GPUI Kit 控件使用默认蓝紫 primary，与页面陶土色系脱节 | `palette::apply_theme_overrides` 在启动与每次切换外观后把 clay primary 写入主题配色，并补充对比度单测 |
+| Buttons | 只演示 primary / secondary 两种 | 覆盖 primary / secondary / ghost / danger / link、四种尺寸、图标按钮、禁用态与真实 busy 流（900ms 计时 + 完成计数） |
+| Home | 单卡片 + 文案入口，缺少容量信息 | 重排为任务统计卡（计数 + 容量环）加双入口行，全部数据来自本地状态 |
+| Tasks | 无密度概念，删除仅文字按钮 | 行距由 Library 的密度单选真实驱动；删除改为图标按钮并带 tooltip；新增行号图块 |
+| Preferences | 开关裸排、无真实路径信息 | 改为 `kit::setting_row`（图标 + 说明 + 右侧控件），显示真实 settings.json 路径 |
+| Nav | 选中项只有底色差异 | 选中项加陶土色左指示条与强调图标，头部加页面图标与 LOCAL 胶囊，折叠按钮改用 PanelLeft 图标 |
+| Reuse | 页面样式内联重复 | 抽出 `src/kit.rs`：card / stage / section_head / field_label / caption / pill / swatch / divider / setting_row |
+
+## 验证范围
+
+- `cargo fmt`、`cargo check`、`cargo clippy`（仅遗留 2 条历史告警：storage Default 可派生、destination_row 参数数，均在改动前已存在）、`cargo test` 7 项全部通过。
+- `cargo run` 启动冒烟：窗口正常打开、无 panic，9 秒后手动结束。
+- Windows 实机以外（macOS、多 DPI、reduced-motion、键盘可达性）的核对应由 CI 与实机完成，未通过前不得宣称发布。
+
+---
+
 # UI review · 2026-11-21
 
 | 位置 | 实测代码发现 | 修改 |

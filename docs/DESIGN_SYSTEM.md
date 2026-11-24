@@ -29,8 +29,11 @@
 | Border | `#DDE1D9` | `#394039` | 结构分隔 |
 | Accent soft | `#F6E9DF` | `#45362C` | 限定范围强调 |
 | Accent ink | `#885035` | `#F0B992` | 强调文字、图标 |
+| Theme primary | `#A85432` | `#E2A97F` | GPUI Kit 原生控件主色 |
 
-`src/palette.rs` 单测确保核心文字和强调文字与底色满足至少 4.5:1 对比度。图标、disabled、hover 和 focus 仍需实机检查。
+`src/palette.rs` 单测确保核心文字和强调文字与底色满足至少 4.5:1 对比度，主题 primary 与其前景色同样受测。`palette::apply_theme_overrides` 把陶土色 primary 写入 GPUI Kit 主题的当前配色（`Theme::change` 会恢复默认配色，因此每次切换外观后必须重新应用；当前在启动与 `set_dark` 时调用）。图标、disabled、hover 和 focus 仍需实机检查。
+
+Library 页面是组件画廊，按 01–06 编号展示：Actions（按钮变体 / 尺寸 / 图标 / busy）、Entry（受控输入与实时字数）、Selection（Switch / Checkbox / Radio，密度选项真实作用于 Tasks 行距）、Indicators（Badge / Tag / Kbd）、Feedback（Slider 驱动 Progress、容量环、Spinner / Skeleton）、Color roles（当前模式的语义色板与十六进制值）。画廊内均为真实工作台状态：任务计数、容量、主题与侧栏偏好直接来自 Workspace。
 
 ## 组件与交互规则
 

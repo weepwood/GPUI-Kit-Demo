@@ -12,9 +12,9 @@
 ## 界面组成
 
 - **Home**：本地任务数与高频入口，不使用虚构的增长指标。
-- **Library**：原生 Button、Input、Switch 与设计 Token 预览，预览输入与任务编辑相互独立。
-- **Tasks**：输入、创建、删除本地任务；此处是任务编辑的唯一入口。
-- **Preferences**：浅色 / 深色模式与导航折叠状态，重启后保留。
+- **Library**：六节组件画廊（Actions / Entry / Selection / Indicators / Feedback / Color roles），全部示例绑定真实状态；预览输入与任务编辑相互独立。
+- **Tasks**：输入、创建、删除本地任务；此处是任务编辑的唯一入口，行距密度跟随 Library 中的演示设置。
+- **Preferences**：浅色 / 深色模式与导航折叠状态，重启后保留；显示真实配置文件路径。
 - **Status bar**：持续反馈本地保存状态，不占用内容区。
 
 界面由 Rust + GPUI 原生渲染，无 Electron 或 WebView。任务、主题与侧栏偏好保存到系统配置目录的 JSON 文件中，不需要在线账号。
@@ -50,7 +50,9 @@ Pull Request 触发两平台编译与测试；推送主分支后，工作流从 
 
 ```text
 src/main.rs                 GPUI 原生工作台与交互
-src/palette.rs              深浅色语义 Token 和对比度测试
+src/gallery.rs              Library 组件画廊（六节展示，绑定真实状态）
+src/kit.rs                  可复用设计构件：卡片、舞台、标题、胶囊、设置行等
+src/palette.rs              深浅色语义 Token、主题色同步与对比度测试
 src/storage.rs              本地状态持久化与数据校验
 docs/DESIGN_SYSTEM.md       可复用设计约束和 AI 生成检查清单
 docs/UI_AUDIT.md            设计缺陷与修复记录

@@ -25,7 +25,9 @@ impl Default for Settings {
 
 impl Settings {
     fn normalize(&mut self) {
-        self.tasks = self.tasks.drain(..)
+        self.tasks = self
+            .tasks
+            .drain(..)
             .map(|task| task.trim().chars().take(MAX_TASK_CHARS).collect::<String>())
             .filter(|task| !task.is_empty())
             .take(MAX_TASKS)
@@ -47,7 +49,7 @@ pub fn load() -> io::Result<Settings> {
                 .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
             settings.normalize();
             Ok(settings)
-        },
+        }
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(Settings::default()),
         Err(err) => Err(err),
     }
@@ -55,7 +57,9 @@ pub fn load() -> io::Result<Settings> {
 
 pub fn save(settings: &Settings) -> io::Result<()> {
     let path = settings_path()?;
-    if let Some(parent) = path.parent() { fs::create_dir_all(parent)?; }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
     let content = serde_json::to_vec_pretty(settings).map_err(io::Error::other)?;
     fs::write(path, content)
 }
@@ -81,7 +85,11 @@ mod tests {
 
     #[test]
     fn serialize_and_restore() {
-        let settings = Settings { dark:true, collapsed:true, tasks:vec!["One".to_string()] };
+        let settings = Settings {
+            dark: true,
+            collapsed: true,
+            tasks: vec!["One".to_string()],
+        };
         let data = serde_json::to_string(&settings).unwrap();
         assert_eq!(serde_json::from_str::<Settings>(&data).unwrap(), settings);
     }
@@ -89,8 +97,9 @@ mod tests {
     #[test]
     fn sanitize_loaded_tasks() {
         let mut settings = Settings {
-            dark:false, collapsed:false,
-            tasks:vec![" ".to_owned(), "  hello  ".to_owned(), "x".repeat(300)],
+            dark: false,
+            collapsed: false,
+            tasks: vec![" ".to_owned(), "  hello  ".to_owned(), "x".repeat(300)],
         };
         settings.normalize();
         assert_eq!(settings.tasks[0], "hello");
